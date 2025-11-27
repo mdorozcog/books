@@ -6,4 +6,3 @@ class AddAuthenticationTokenToUsers < ActiveRecord::Migration[8.1]
     add_index :users, :authentication_token, unique: true
   end
 end
-

@@ -10,6 +10,8 @@
 # Ignore all environment files.
 .env*
 
+/spec/examples.txt
+
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*
