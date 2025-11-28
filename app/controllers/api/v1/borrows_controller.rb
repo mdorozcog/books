@@ -10,11 +10,15 @@ module Api
 
       def index
         borrows = if current_user.roles.first&.name == "librarian"
-                    Borrow.all
+                    Borrow.all.includes(:book, :user)
                   else
-                    Borrow.where(user: current_user)
+                    Borrow.where(user: current_user).includes(:book)
                   end
-        render json: borrows
+        if current_user.roles.first&.name == "librarian"
+          render json: borrows.as_json(include: [:book, user: { only: [:id, :email] }])
+        else
+          render json: borrows.as_json(include: :book)
+        end
       end
 
       def show
@@ -30,6 +34,7 @@ module Api
         borrow = Borrow.new(borrow_params)
         borrow.user = current_user
         borrow.status = :borrowed
+        borrow.due_at = 15.days.from_now
 
         if borrow.save
           render json: borrow, status: :created

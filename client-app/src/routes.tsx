@@ -2,6 +2,7 @@ import type { RouteObject } from "react-router";
 import { Navigate } from "react-router";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import HomePage from "./pages/HomePage";
 import BooksPage from "./pages/BooksPage";
 import AddBookPage from "./pages/AddBookPage";
 
@@ -20,7 +21,11 @@ export const routes: RouteObject[] = [
   },
   {
     path: "/dashboard",
-    element: <Navigate to="/dashboard/books" replace />,
+    element: <Navigate to="/dashboard/home" replace />,
+  },
+  {
+    path: "/dashboard/home",
+    element: <HomePage />,
   },
   {
     path: "/dashboard/books",

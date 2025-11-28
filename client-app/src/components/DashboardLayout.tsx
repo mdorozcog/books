@@ -102,8 +102,21 @@ export default function DashboardLayout({ children, title = 'Dashboard', user }:
     return null
   }
 
+  const HomeIcon = () => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 24, height: 24 }}>
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  )
+
   // Define menu items based on user roles
   const menuItems = [
+    {
+      text: 'Home',
+      icon: <HomeIcon />,
+      path: '/dashboard/home',
+      roles: ['librarian', 'member'],
+    },
     {
       text: 'All Books',
       icon: <MenuBookIcon />,
@@ -116,18 +129,8 @@ export default function DashboardLayout({ children, title = 'Dashboard', user }:
       path: '/dashboard/books/new',
       roles: ['librarian'],
     },
-    {
-      text: 'Profile',
-      icon: <PersonIcon />,
-      path: '/dashboard/profile',
-      roles: ['librarian', 'member'],
-    },
-    {
-      text: 'Settings',
-      icon: <SettingsIcon />,
-      path: '/dashboard/settings',
-      roles: ['librarian'],
-    },
+    
+    ,
   ].filter((item) => item.roles.some((role) => user.roles.includes(role)))
 
   const drawer = (

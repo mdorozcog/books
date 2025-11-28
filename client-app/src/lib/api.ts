@@ -266,6 +266,11 @@ export interface Borrow {
   due_at: string | null;
   created_at: string;
   updated_at: string;
+  book?: Book;
+  user?: {
+    id: number;
+    email: string;
+  };
 }
 
 export async function createBorrow(params: CreateBorrowParams): Promise<Borrow> {
