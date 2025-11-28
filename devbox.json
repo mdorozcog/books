@@ -3,11 +3,18 @@
     "packages": ["ruby@3.4.5", "bundler@2.7.2", "nodejs@24"],
     "shell": {
       "init_hook": [
-        "cd client-app; npm install"
+        "echo Books Shell"
       ],
       "scripts": {
         "test": [
-          "echo \"Error: no test specified\" && exit 1"
+          "rspec spec"
+        ],
+        "install": [
+          "bundle install",
+          "cd client-app; npm install"
+        ],
+        "db_setup": [
+          "rails db:create; rails db:migrate"
         ]
       }
     }
