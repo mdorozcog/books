@@ -44,7 +44,7 @@ RSpec.describe Borrow, type: :model do
       another_user = User.create!(email: "another@example.com", password: "password123", password_confirmation: "password123")
       Borrow.create!(user: user, book: book, status: :borrowed, due_at: 15.days.from_now)
       Borrow.create!(user: another_user, book: book, status: :borrowed, due_at: 15.days.from_now)
-      
+
       # Try to create another borrow when all copies are borrowed
       third_user = User.create!(email: "third@example.com", password: "password123", password_confirmation: "password123")
       new_borrow = Borrow.new(user: third_user, book: book, due_at: 15.days.from_now)
@@ -57,7 +57,7 @@ RSpec.describe Borrow, type: :model do
       # Create one borrow, leaving 2 copies available
       another_user = User.create!(email: "another@example.com", password: "password123", password_confirmation: "password123")
       Borrow.create!(user: user, book: book, status: :borrowed, due_at: 15.days.from_now)
-      
+
       # Should be able to create another borrow with a different user
       new_borrow = Borrow.new(user: another_user, book: book, due_at: 15.days.from_now)
       expect(new_borrow).to be_valid
@@ -66,7 +66,7 @@ RSpec.describe Borrow, type: :model do
     it 'prevents borrowing the same book when user already has an active borrow' do
       # Create an active borrow
       Borrow.create!(user: user, book: book, status: :borrowed, due_at: 15.days.from_now)
-      
+
       # Try to create another borrow for the same user and book
       new_borrow = Borrow.new(user: user, book: book, due_at: 15.days.from_now)
       expect(new_borrow).not_to be_valid
@@ -77,7 +77,7 @@ RSpec.describe Borrow, type: :model do
       # Create and return a borrow
       borrow_record = Borrow.create!(user: user, book: book, status: :borrowed, due_at: 15.days.from_now)
       borrow_record.update!(status: :returned)
-      
+
       # Should be able to create another borrow since the previous one was returned
       new_borrow = Borrow.new(user: user, book: book, due_at: 15.days.from_now)
       expect(new_borrow).to be_valid
@@ -88,7 +88,7 @@ RSpec.describe Borrow, type: :model do
       # Create a borrow and return it
       borrow_record = Borrow.create!(user: user, book: book, status: :borrowed, due_at: 15.days.from_now)
       borrow_record.update!(status: :returned)
-      
+
       # Should be able to create another borrow since the previous one was returned
       new_borrow = Borrow.new(user: user, book: book, due_at: 15.days.from_now)
       expect(new_borrow).to be_valid
@@ -100,7 +100,7 @@ RSpec.describe Borrow, type: :model do
       another_user = User.create!(email: "another@example.com", password: "password123", password_confirmation: "password123")
       Borrow.create!(user: user, book: book, status: :borrowed, due_at: 15.days.from_now)
       Borrow.create!(user: another_user, book: book, status: :returned, due_at: 15.days.from_now)
-      
+
       # Should still have 1 copy available (only the borrowed one counts)
       # But user already has an active borrow, so use a different user
       third_user = User.create!(email: "third@example.com", password: "password123", password_confirmation: "password123")

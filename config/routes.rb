@@ -19,14 +19,14 @@ Rails.application.routes.draw do
       post "users", to: "users#create"
 
       # Books
-      resources :books, only: [:index, :show, :create, :update, :destroy] do
+      resources :books, only: [ :index, :show, :create, :update, :destroy ] do
         collection do
           post :search
         end
       end
 
       # Borrows
-      resources :borrows, only: [:index, :show, :create, :update]
+      resources :borrows, only: [ :index, :show, :create, :update ]
     end
   end
 end
