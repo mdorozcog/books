@@ -99,6 +99,7 @@ export interface Book {
   genre: string;
   isbn: string;
   copies: number;
+  available_copies: number;
   created_at: string;
   updated_at: string;
 }
@@ -250,5 +251,98 @@ export async function deleteBook(id: number): Promise<void> {
     const errorMessages = data.errors || [data.error || "Failed to delete book"];
     throw new Error(Array.isArray(errorMessages) ? errorMessages.join(", ") : errorMessages);
   }
+}
+
+export interface CreateBorrowParams {
+  book_id: number;
+  due_at?: string;
+}
+
+export interface Borrow {
+  id: number;
+  user_id: number;
+  book_id: number;
+  status: string;
+  due_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function createBorrow(params: CreateBorrowParams): Promise<Borrow> {
+  const token = getStoredToken();
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+
+  const response = await fetch(`${API_ENDPOINT}/borrows`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ borrow: params }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMessages = data.errors || [data.error || "Failed to borrow book"];
+    throw new Error(Array.isArray(errorMessages) ? errorMessages.join(", ") : errorMessages);
+  }
+
+  return data as Borrow;
+}
+
+export async function fetchBorrows(): Promise<Borrow[]> {
+  const token = getStoredToken();
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+
+  const response = await fetch(`${API_ENDPOINT}/borrows`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error((data as ApiError).error || "Failed to fetch borrows");
+  }
+
+  return data as Borrow[];
+}
+
+export interface UpdateBorrowParams {
+  status?: string;
+  due_at?: string;
+}
+
+export async function updateBorrow(id: number, params: UpdateBorrowParams): Promise<Borrow> {
+  const token = getStoredToken();
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+
+  const response = await fetch(`${API_ENDPOINT}/borrows/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ borrow: params }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMessages = data.errors || [data.error || "Failed to update borrow"];
+    throw new Error(Array.isArray(errorMessages) ? errorMessages.join(", ") : errorMessages);
+  }
+
+  return data as Borrow;
 }
 

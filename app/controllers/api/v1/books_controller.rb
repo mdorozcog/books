@@ -10,17 +10,17 @@ module Api
 
       def index
         books = Book.all
-        render json: books
+        render json: books.as_json(methods: :available_copies)
       end
 
       def show
-        render json: @book
+        render json: @book.as_json(methods: :available_copies)
       end
 
       def create
         book = Book.create(book_params)
         if book.persisted?
-          render json: book, status: :created
+          render json: book.as_json(methods: :available_copies), status: :created
         else
           render json: { errors: book.errors.full_messages }, status: :unprocessable_content
         end
@@ -28,7 +28,7 @@ module Api
 
       def update
         if @book.update(book_params)
-          render json: @book
+          render json: @book.as_json(methods: :available_copies)
         else
           render json: { errors: @book.errors.full_messages }, status: :unprocessable_content
         end
@@ -54,7 +54,7 @@ module Api
         )
 
         
-        render json: books
+        render json: books.as_json(methods: :available_copies)
       end
 
       private

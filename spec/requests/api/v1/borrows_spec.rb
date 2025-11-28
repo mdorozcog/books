@@ -179,6 +179,25 @@ RSpec.describe "Api::V1::Borrows", type: :request do
 
         expect(response).to have_http_status(:created)
       end
+
+      it "prevents borrowing the same book when user already has an active borrow" do
+        Borrow.create!(user: member, book: book, status: :borrowed)
+
+        post "/api/v1/borrows", params: valid_borrow_params, headers: auth_headers(member)
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json_response[:errors]).to be_present
+        expect(json_response[:errors]).to include(match(/already borrowed/i))
+      end
+
+      it "allows borrowing the same book after returning the previous borrow" do
+        borrow = Borrow.create!(user: member, book: book, status: :borrowed)
+        borrow.update!(status: :returned)
+
+        post "/api/v1/borrows", params: valid_borrow_params, headers: auth_headers(member)
+
+        expect(response).to have_http_status(:created)
+      end
     end
 
     context "when authenticated as librarian" do

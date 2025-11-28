@@ -23,9 +23,10 @@ import {
 } from '@mui/material'
 import DashboardLayout from '../components/DashboardLayout'
 import '../App.css'
-import { fetchBooks, searchBooks, deleteBook, getStoredToken, type Book } from '../lib/api'
+import { fetchBooks, searchBooks, deleteBook, createBorrow, fetchBorrows, updateBorrow, getStoredToken, type Book, type Borrow } from '../lib/api'
 
 interface User {
+  id: number
   email: string
   roles: string[]
 }
@@ -57,6 +58,9 @@ function BooksPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [bookToDelete, setBookToDelete] = useState<Book | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [borrowingBookId, setBorrowingBookId] = useState<number | null>(null)
+  const [borrows, setBorrows] = useState<Borrow[]>([])
+  const [returningBorrowId, setReturningBorrowId] = useState<number | null>(null)
 
   useEffect(() => {
     const token = getStoredToken()
@@ -78,6 +82,9 @@ function BooksPage() {
     }
 
     loadBooks()
+    if (user) {
+      loadBorrows()
+    }
   }, [navigate, user])
 
   const loadBooks = async () => {
@@ -90,6 +97,16 @@ function BooksPage() {
       setError(err instanceof Error ? err.message : 'Failed to load books')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadBorrows = async () => {
+    try {
+      const data = await fetchBorrows()
+      setBorrows(data)
+    } catch (err) {
+      // Silently fail - borrows are not critical for the page
+      console.error('Failed to load borrows:', err)
     }
   }
 
@@ -147,7 +164,61 @@ function BooksPage() {
     setBookToDelete(null)
   }
 
+  const handleBorrow = async (book: Book) => {
+    if (book.available_copies <= 0) {
+      setError('No copies available for borrowing')
+      return
+    }
+
+    setBorrowingBookId(book.id)
+    setError(null)
+    try {
+      await createBorrow({ book_id: book.id })
+      // Reload books to update available_copies
+      await loadBooks()
+      // Reload borrows to update the list
+      await loadBorrows()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to borrow book')
+    } finally {
+      setBorrowingBookId(null)
+    }
+  }
+
+  const handleReturn = async (book: Book) => {
+    // Find the active borrow for this book by the current user
+    const activeBorrow = borrows.find(
+      (borrow) => borrow.book_id === book.id && borrow.user_id === user?.id && borrow.status === 'borrowed'
+    )
+
+    if (!activeBorrow) {
+      setError('No active borrow found for this book')
+      return
+    }
+
+    setReturningBorrowId(activeBorrow.id)
+    setError(null)
+    try {
+      await updateBorrow(activeBorrow.id, { status: 'returned' })
+      // Reload books to update available_copies
+      await loadBooks()
+      // Reload borrows to update the list
+      await loadBorrows()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to return book')
+    } finally {
+      setReturningBorrowId(null)
+    }
+  }
+
+  const getActiveBorrowForBook = (bookId: number): Borrow | undefined => {
+    return borrows.find(
+      (borrow) => borrow.book_id === bookId && borrow.user_id === user?.id && borrow.status === 'borrowed'
+    )
+  }
+
   const isLibrarian = user?.roles.includes('librarian') || false
+  const isMember = user?.roles.includes('member') || false
 
   if (!user) {
     return null
@@ -401,7 +472,17 @@ function BooksPage() {
                                 display: 'block',
                               }}
                             >
-                              Copies Available: {book.copies}
+                              Total copies: {book.copies}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: 'var(--color-text-muted)',
+                                fontFamily: 'var(--font-body)',
+                                display: 'block',
+                              }}
+                            >
+                              Copies Available: {book.available_copies}
                             </Typography>
                           </Box>
 
@@ -445,6 +526,73 @@ function BooksPage() {
                                 >
                                   Delete
                                 </Button>
+                              </Stack>
+                            </Box>
+                          )}
+
+                          {(isMember || isLibrarian) && (
+                            <Box sx={{ pt: 1 }}>
+                              <Stack spacing={1}>
+                                <Button
+                                  variant="contained"
+                                  size="small"
+                                  fullWidth
+                                  onClick={() => handleBorrow(book)}
+                                  disabled={book.available_copies <= 0 || borrowingBookId === book.id || getActiveBorrowForBook(book.id) !== undefined}
+                                  sx={{
+                                    bgcolor: 'var(--color-accent)',
+                                    color: '#000',
+                                    textTransform: 'none',
+                                    fontFamily: 'var(--font-body)',
+                                    fontWeight: 500,
+                                    '&:hover': {
+                                      bgcolor: 'var(--color-accent-hover)',
+                                    },
+                                    '&:disabled': {
+                                      bgcolor: 'var(--color-border)',
+                                      color: 'var(--color-text-muted)',
+                                    },
+                                  }}
+                                >
+                                  {borrowingBookId === book.id ? (
+                                    <CircularProgress size={20} sx={{ color: 'var(--color-text-muted)' }} />
+                                  ) : book.available_copies <= 0 ? (
+                                    'No Copies Available'
+                                  ) : getActiveBorrowForBook(book.id) ? (
+                                    'Already Borrowed'
+                                  ) : (
+                                    'Borrow'
+                                  )}
+                                </Button>
+                                {isLibrarian && getActiveBorrowForBook(book.id) && (
+                                  <Button
+                                    variant="outlined"
+                                    size="small"
+                                    fullWidth
+                                    onClick={() => handleReturn(book)}
+                                    disabled={returningBorrowId === getActiveBorrowForBook(book.id)?.id}
+                                    sx={{
+                                      borderColor: '#4caf50',
+                                      color: '#4caf50',
+                                      textTransform: 'none',
+                                      fontFamily: 'var(--font-body)',
+                                      '&:hover': {
+                                        borderColor: '#388e3c',
+                                        bgcolor: 'rgba(76, 175, 80, 0.1)',
+                                      },
+                                      '&:disabled': {
+                                        borderColor: 'var(--color-border)',
+                                        color: 'var(--color-text-muted)',
+                                      },
+                                    }}
+                                  >
+                                    {returningBorrowId === getActiveBorrowForBook(book.id)?.id ? (
+                                      <CircularProgress size={20} sx={{ color: 'var(--color-text-muted)' }} />
+                                    ) : (
+                                      'Return'
+                                    )}
+                                  </Button>
+                                )}
                               </Stack>
                             </Box>
                           )}
