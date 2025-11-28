@@ -346,5 +346,3 @@ RSpec.describe "Api::V1::Books", type: :request do
     end
   end
 end
-
-

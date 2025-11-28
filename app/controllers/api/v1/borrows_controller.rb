@@ -4,18 +4,18 @@ module Api
   module V1
     class BorrowsController < BaseController
       before_action :authorize_resource
-      before_action :set_borrow, only: [:show, :update, :destroy]
+      before_action :set_borrow, only: [ :show, :update, :destroy ]
 
       RESOURCE = Borrow
 
       def index
         borrows = if current_user.roles.first&.name == "librarian"
                     Borrow.all.includes(:book, :user)
-                  else
+        else
                     Borrow.where(user: current_user).includes(:book)
-                  end
+        end
         if current_user.roles.first&.name == "librarian"
-          render json: borrows.as_json(include: [:book, user: { only: [:id, :email] }])
+          render json: borrows.as_json(include: [ :book, user: { only: [ :id, :email ] } ])
         else
           render json: borrows.as_json(include: :book)
         end
@@ -52,7 +52,7 @@ module Api
               render json: { errors: @borrow.errors.full_messages }, status: :unprocessable_content
             end
           rescue ArgumentError => e
-            render json: { errors: [e.message] }, status: :unprocessable_content
+            render json: { errors: [ e.message ] }, status: :unprocessable_content
           end
         else
           render json: { error: "Unauthorized" }, status: :unauthorized
@@ -82,4 +82,3 @@ module Api
     end
   end
 end
-
