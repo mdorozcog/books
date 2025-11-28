@@ -39,6 +39,24 @@ module Api
         render json: { message: "Book deleted successfully" }
       end
 
+      def search
+        search_term = params[:q] || params[:search_string]
+        
+        if search_term.blank?
+          render json: { error: "Search parameter is required" }, status: :bad_request
+          return
+        end
+
+        search_term_lower = search_term.downcase
+        books = Book.where(
+          "LOWER(title) LIKE ? OR LOWER(author) LIKE ? OR LOWER(genre) LIKE ? OR LOWER(isbn) LIKE ?",
+          "%#{search_term_lower}%", "%#{search_term_lower}%", "%#{search_term_lower}%", "%#{search_term_lower}%"
+        )
+
+        
+        render json: books
+      end
+
       private
 
       def set_book

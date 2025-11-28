@@ -10,11 +10,13 @@ class Book < ApplicationRecord
       show: true,
       create: true,
       update: true,
-      destroy: true
+      destroy: true,
+      search: true
     },
     member: {
       index: true,
-      show: true
+      show: true,
+      search: true
     }
   }
 end
