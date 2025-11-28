@@ -21,15 +21,11 @@ import {
   DialogContentText,
   DialogActions,
 } from '@mui/material'
-import DashboardLayout from '../components/DashboardLayout'
-import '../App.css'
-import { fetchBooks, searchBooks, deleteBook, createBorrow, fetchBorrows, updateBorrow, getStoredToken, type Book, type Borrow } from '../lib/api'
-
-interface User {
-  id: number
-  email: string
-  roles: string[]
-}
+import DashboardLayout from '../../components/DashboardLayout'
+import '../../App.css'
+import { getStoredToken } from '../../lib/api'
+import { useBooksStore } from './useBooksStore'
+import type { User } from './types'
 
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 20, height: 20 }}>
@@ -48,19 +44,33 @@ const ClearIcon = () => (
 function BooksPage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [books, setBooks] = useState<Book[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
   const [user, setUser] = useState<User | null>(
     (location.state as { user?: User })?.user || null
   )
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [bookToDelete, setBookToDelete] = useState<Book | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [borrowingBookId, setBorrowingBookId] = useState<number | null>(null)
-  const [borrows, setBorrows] = useState<Borrow[]>([])
-  const [returningBorrowId, setReturningBorrowId] = useState<number | null>(null)
+
+  const {
+    books,
+    isLoading,
+    error,
+    searchQuery,
+    deleteDialogOpen,
+    bookToDelete,
+    isDeleting,
+    borrowingBookId,
+    returningBorrowId,
+    setSearchQuery,
+    setError,
+    loadBooks,
+    loadBorrows,
+    handleSearch,
+    handleClearSearch,
+    handleDeleteClick,
+    handleDeleteConfirm,
+    handleDeleteCancel,
+    handleBorrow,
+    handleReturn,
+    getActiveBorrowForBook,
+  } = useBooksStore()
 
   useEffect(() => {
     const token = getStoredToken()
@@ -69,7 +79,6 @@ function BooksPage() {
       return
     }
 
-    // Get user from localStorage if not in state
     if (!user) {
       const storedUser = localStorage.getItem('user')
       if (storedUser) {
@@ -85,136 +94,12 @@ function BooksPage() {
     if (user) {
       loadBorrows()
     }
-  }, [navigate, user])
-
-  const loadBooks = async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const data = await fetchBooks()
-      setBooks(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load books')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const loadBorrows = async () => {
-    try {
-      const data = await fetchBorrows()
-      setBorrows(data)
-    } catch (err) {
-      // Silently fail - borrows are not critical for the page
-      console.error('Failed to load borrows:', err)
-    }
-  }
-
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      loadBooks()
-      return
-    }
-
-    setError(null)
-    try {
-      const results = await searchBooks(searchQuery)
-      setBooks(results)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to search books')
-    }
-  }
-
-  const handleClearSearch = () => {
-    setSearchQuery('')
-    loadBooks()
-  }
+  }, [navigate, user, loadBooks, loadBorrows])
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSearch()
     }
-  }
-
-  const handleDeleteClick = (book: Book) => {
-    setBookToDelete(book)
-    setDeleteDialogOpen(true)
-  }
-
-  const handleDeleteConfirm = async () => {
-    if (!bookToDelete) return
-
-    setIsDeleting(true)
-    setError(null)
-    try {
-      await deleteBook(bookToDelete.id)
-      // Remove the book from the list
-      setBooks(books.filter((b) => b.id !== bookToDelete.id))
-      setDeleteDialogOpen(false)
-      setBookToDelete(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete book')
-    } finally {
-      setIsDeleting(false)
-    }
-  }
-
-  const handleDeleteCancel = () => {
-    setDeleteDialogOpen(false)
-    setBookToDelete(null)
-  }
-
-  const handleBorrow = async (book: Book) => {
-    if (book.available_copies <= 0) {
-      setError('No copies available for borrowing')
-      return
-    }
-
-    setBorrowingBookId(book.id)
-    setError(null)
-    try {
-      await createBorrow({ book_id: book.id })
-      // Reload books to update available_copies
-      await loadBooks()
-      // Reload borrows to update the list
-      await loadBorrows()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to borrow book')
-    } finally {
-      setBorrowingBookId(null)
-    }
-  }
-
-  const handleReturn = async (book: Book) => {
-    // Find the active borrow for this book by the current user
-    const activeBorrow = borrows.find(
-      (borrow) => borrow.book_id === book.id && borrow.user_id === user?.id && borrow.status === 'borrowed'
-    )
-
-    if (!activeBorrow) {
-      setError('No active borrow found for this book')
-      return
-    }
-
-    setReturningBorrowId(activeBorrow.id)
-    setError(null)
-    try {
-      await updateBorrow(activeBorrow.id, { status: 'returned' })
-      // Reload books to update available_copies
-      await loadBooks()
-      // Reload borrows to update the list
-      await loadBorrows()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to return book')
-    } finally {
-      setReturningBorrowId(null)
-    }
-  }
-
-  const getActiveBorrowForBook = (bookId: number): Borrow | undefined => {
-    return borrows.find(
-      (borrow) => borrow.book_id === bookId && borrow.user_id === user?.id && borrow.status === 'borrowed'
-    )
   }
 
   const isLibrarian = user?.roles.includes('librarian') || false
@@ -538,7 +423,11 @@ function BooksPage() {
                                   size="small"
                                   fullWidth
                                   onClick={() => handleBorrow(book)}
-                                  disabled={book.available_copies <= 0 || borrowingBookId === book.id || getActiveBorrowForBook(book.id) !== undefined}
+                                  disabled={
+                                    book.available_copies <= 0 ||
+                                    borrowingBookId === book.id ||
+                                    getActiveBorrowForBook(book.id, user.id) !== undefined
+                                  }
                                   sx={{
                                     bgcolor: 'var(--color-accent)',
                                     color: '#000',
@@ -558,19 +447,19 @@ function BooksPage() {
                                     <CircularProgress size={20} sx={{ color: 'var(--color-text-muted)' }} />
                                   ) : book.available_copies <= 0 ? (
                                     'No Copies Available'
-                                  ) : getActiveBorrowForBook(book.id) ? (
+                                  ) : getActiveBorrowForBook(book.id, user.id) ? (
                                     'Already Borrowed'
                                   ) : (
                                     'Borrow'
                                   )}
                                 </Button>
-                                {isLibrarian && getActiveBorrowForBook(book.id) && (
+                                {isLibrarian && getActiveBorrowForBook(book.id, user.id) && (
                                   <Button
                                     variant="outlined"
                                     size="small"
                                     fullWidth
-                                    onClick={() => handleReturn(book)}
-                                    disabled={returningBorrowId === getActiveBorrowForBook(book.id)?.id}
+                                    onClick={() => handleReturn(book, user.id)}
+                                    disabled={returningBorrowId === getActiveBorrowForBook(book.id, user.id)?.id}
                                     sx={{
                                       borderColor: '#4caf50',
                                       color: '#4caf50',
@@ -586,7 +475,7 @@ function BooksPage() {
                                       },
                                     }}
                                   >
-                                    {returningBorrowId === getActiveBorrowForBook(book.id)?.id ? (
+                                    {returningBorrowId === getActiveBorrowForBook(book.id, user.id)?.id ? (
                                       <CircularProgress size={20} sx={{ color: 'var(--color-text-muted)' }} />
                                     ) : (
                                       'Return'

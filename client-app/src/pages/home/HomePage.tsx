@@ -20,32 +20,30 @@ import {
   TableRow,
   Button,
 } from '@mui/material'
-import DashboardLayout from '../components/DashboardLayout'
-import '../App.css'
-import { fetchBorrows, updateBorrow, getStoredToken, type Borrow } from '../lib/api'
-import type { Book } from '../lib/api'
-
-interface User {
-  id: number
-  email: string
-  roles: string[]
-}
-
-interface BorrowWithBook extends Borrow {
-  book?: Book
-}
+import DashboardLayout from '../../components/DashboardLayout'
+import '../../App.css'
+import { getStoredToken } from '../../lib/api'
+import { useHomeStore } from './useHomeStore'
+import { isOverdue, formatDate, getDaysUntilDue } from './utils'
+import type { User } from './types'
 
 function HomePage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [borrows, setBorrows] = useState<BorrowWithBook[]>([])
-  const [allBorrows, setAllBorrows] = useState<BorrowWithBook[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [returningBorrowId, setReturningBorrowId] = useState<number | null>(null)
   const [user, setUser] = useState<User | null>(
     (location.state as { user?: User })?.user || null
   )
+
+  const {
+    borrows,
+    allBorrows,
+    isLoading,
+    error,
+    returningBorrowId,
+    setError,
+    loadBorrows,
+    handleReturn,
+  } = useHomeStore()
 
   useEffect(() => {
     const token = getStoredToken()
@@ -54,7 +52,6 @@ function HomePage() {
       return
     }
 
-    // Get user from localStorage if not in state
     if (!user) {
       const storedUser = localStorage.getItem('user')
       if (storedUser) {
@@ -65,74 +62,14 @@ function HomePage() {
         }
       }
     }
-
-    loadBorrows()
   }, [navigate, user])
 
-  const loadBorrows = async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const data = await fetchBorrows()
-      // Filter to only show borrowed books (not returned)
-      const activeBorrows = data.filter((borrow) => borrow.status === 'borrowed') as BorrowWithBook[]
-      
-      const userIsLibrarian = user?.roles.includes('librarian') || false
-      if (userIsLibrarian) {
-        // For librarians, store all borrows separately
-        setAllBorrows(activeBorrows)
-        // For personal view, filter to only their own borrows
-        const myBorrows = activeBorrows.filter((borrow) => borrow.user_id === user?.id)
-        setBorrows(myBorrows)
-      } else {
-        setBorrows(activeBorrows)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load borrows')
-    } finally {
-      setIsLoading(false)
+  useEffect(() => {
+    if (user) {
+      const isLibrarian = user.roles.includes('librarian')
+      loadBorrows(user.id, isLibrarian)
     }
-  }
-
-  const handleReturn = async (borrowId: number) => {
-    setReturningBorrowId(borrowId)
-    setError(null)
-    try {
-      await updateBorrow(borrowId, { status: 'returned' })
-      // Reload borrows to update the list
-      await loadBorrows()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to return book')
-    } finally {
-      setReturningBorrowId(null)
-    }
-  }
-
-  const isOverdue = (dueDate: string | null): boolean => {
-    if (!dueDate) return false
-    const due = new Date(dueDate)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    due.setHours(0, 0, 0, 0)
-    return due < today
-  }
-
-  const formatDate = (dateString: string | null): string => {
-    if (!dateString) return 'No due date'
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-  }
-
-  const getDaysUntilDue = (dueDate: string | null): number | null => {
-    if (!dueDate) return null
-    const due = new Date(dueDate)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    due.setHours(0, 0, 0, 0)
-    const diffTime = due.getTime() - today.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays
-  }
+  }, [user, loadBorrows])
 
   const overdueBorrows = borrows.filter((borrow) => isOverdue(borrow.due_at))
   const upcomingBorrows = borrows.filter((borrow) => !isOverdue(borrow.due_at))
@@ -387,7 +324,7 @@ function HomePage() {
                                 <Button
                                   variant="outlined"
                                   size="small"
-                                  onClick={() => handleReturn(borrow.id)}
+                                  onClick={() => handleReturn(borrow.id, user.id, isLibrarian)}
                                   disabled={returningBorrowId === borrow.id}
                                   sx={{
                                     borderColor: '#4caf50',

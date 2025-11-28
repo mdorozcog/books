@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router'
 import {
   Box,
@@ -12,14 +12,11 @@ import {
   CircularProgress,
   MenuItem,
 } from '@mui/material'
-import DashboardLayout from '../components/DashboardLayout'
-import '../App.css'
-import { createBook, updateBook, fetchBook, getStoredToken, type CreateBookParams } from '../lib/api'
-
-interface User {
-  email: string
-  roles: string[]
-}
+import DashboardLayout from '../../components/DashboardLayout'
+import '../../App.css'
+import { getStoredToken } from '../../lib/api'
+import { useAddBookStore } from './useAddBookStore'
+import type { User } from './types'
 
 const genres = [
   'Fiction',
@@ -48,17 +45,19 @@ function AddBookPage() {
   const [user, setUser] = useState<User | null>(
     (location.state as { user?: User })?.user || null
   )
-  const [formData, setFormData] = useState<Omit<CreateBookParams, 'copies'> & { copies: string | number }>({
-    title: '',
-    author: '',
-    genre: '',
-    isbn: '',
-    copies: '',
-  })
-  const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingBook, setIsLoadingBook] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+
+  const {
+    formData,
+    isLoading,
+    isLoadingBook,
+    error,
+    success,
+    setError,
+    setSuccess,
+    loadBook,
+    handleChange,
+    handleSubmit,
+  } = useAddBookStore()
 
   useEffect(() => {
     const token = getStoredToken()
@@ -67,7 +66,6 @@ function AddBookPage() {
       return
     }
 
-    // Get user from localStorage if not in state
     if (!user) {
       const storedUser = localStorage.getItem('user')
       if (storedUser) {
@@ -79,87 +77,24 @@ function AddBookPage() {
       }
     }
 
-    // Check if user is a librarian
     if (user && !user.roles.includes('librarian')) {
       navigate('/dashboard/books')
     }
   }, [navigate, user])
 
-  // Load book data if in edit mode
   useEffect(() => {
     if (isEditMode && id) {
-      const loadBook = async () => {
-        setIsLoadingBook(true)
-        setError(null)
-        try {
-          const book = await fetchBook(parseInt(id))
-          setFormData({
-            title: book.title,
-            author: book.author,
-            genre: book.genre,
-            isbn: book.isbn,
-            copies: book.copies,
-          })
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to load book')
-        } finally {
-          setIsLoadingBook(false)
-        }
-      }
-      loadBook()
+      loadBook(parseInt(id))
     }
-  }, [isEditMode, id])
+  }, [isEditMode, id, loadBook])
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === 'copies' ? (value === '' ? '' : parseInt(value) || '') : value,
-    }))
-    // Clear errors when user starts typing
-    if (error) setError(null)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    setError(null)
-    setSuccess(false)
-
-    // Convert copies to number for submission
-    const bookData: CreateBookParams = {
-      ...formData,
-      copies: typeof formData.copies === 'string' ? parseInt(formData.copies) || 0 : formData.copies,
-    }
-
-    try {
-      if (isEditMode && id) {
-        await updateBook(parseInt(id), bookData)
-        setSuccess(true)
-        // Redirect to books page after 2 seconds
-        setTimeout(() => {
-          navigate('/dashboard/books')
-        }, 2000)
-      } else {
-        await createBook(bookData)
-        setSuccess(true)
-        // Reset form
-        setFormData({
-          title: '',
-          author: '',
-          genre: '',
-          isbn: '',
-          copies: '',
-        })
-        // Redirect to books page after 2 seconds
-        setTimeout(() => {
-          navigate('/dashboard/books')
-        }, 2000)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : (isEditMode ? 'Failed to update book' : 'Failed to create book'))
-    } finally {
-      setIsLoading(false)
+    const result = await handleSubmit(isEditMode, id ? parseInt(id) : undefined)
+    if (result) {
+      setTimeout(() => {
+        navigate('/dashboard/books')
+      }, 2000)
     }
   }
 
@@ -167,14 +102,13 @@ function AddBookPage() {
     return null
   }
 
-  // Check if user is a librarian
   if (!user.roles.includes('librarian')) {
     return null
   }
 
   if (isLoadingBook) {
     return (
-      <DashboardLayout user={user} title={isEditMode ? "Edit Book" : "Add New Book"}>
+      <DashboardLayout user={user} title={isEditMode ? 'Edit Book' : 'Add New Book'}>
         <Container maxWidth="md">
           <Paper
             elevation={0}
@@ -197,7 +131,7 @@ function AddBookPage() {
   }
 
   return (
-    <DashboardLayout user={user} title={isEditMode ? "Edit Book" : "Add New Book"}>
+    <DashboardLayout user={user} title={isEditMode ? 'Edit Book' : 'Add New Book'}>
       <Container maxWidth="md">
         <Paper
           elevation={0}
@@ -269,7 +203,7 @@ function AddBookPage() {
             )}
 
             {/* Form */}
-            <Box component="form" onSubmit={handleSubmit}>
+            <Box component="form" onSubmit={onSubmit}>
               <Stack spacing={3}>
                 <TextField
                   name="title"
