@@ -1,4 +1,7 @@
 class Book < ApplicationRecord
+  has_many :borrows, dependent: :destroy
+  has_many :users, through: :borrows
+
   validates :title, presence: true
   validates :author, presence: true
   validates :isbn, presence: true, uniqueness: true
@@ -19,4 +22,9 @@ class Book < ApplicationRecord
       search: true
     }
   }
+
+  def available_copies
+    borrowed_count = borrows.where(status: :borrowed).count
+    copies.to_i - borrowed_count
+  end
 end
