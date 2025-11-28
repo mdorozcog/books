@@ -4,7 +4,7 @@ module Api
   module V1
     class BooksController < BaseController
       before_action :authorize_resource
-      before_action :set_book, only: [:show, :update, :destroy]
+      before_action :set_book, only: [ :show, :update, :destroy ]
 
       RESOURCE = Book
 
@@ -41,7 +41,7 @@ module Api
 
       def search
         search_term = params[:q] || params[:search_string]
-        
+
         if search_term.blank?
           render json: { error: "Search parameter is required" }, status: :bad_request
           return
@@ -53,7 +53,7 @@ module Api
           "%#{search_term_lower}%", "%#{search_term_lower}%", "%#{search_term_lower}%", "%#{search_term_lower}%"
         )
 
-        
+
         render json: books.as_json(methods: :available_copies)
       end
 
