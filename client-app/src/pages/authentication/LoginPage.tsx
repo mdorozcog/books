@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, Link as RouterLink } from 'react-router'
+import { useEffect } from 'react'
+import { useNavigate, useLocation, Link as RouterLink } from 'react-router'
 import {
   Box,
   Container,
@@ -8,51 +8,55 @@ import {
   Button,
   Typography,
   Alert,
+  Checkbox,
+  FormControlLabel,
   Link,
   CircularProgress,
   Stack,
 } from '@mui/material'
-import '../App.css'
-import { register } from '../lib/api'
+import '../../App.css'
+import { useLoginStore } from './useLoginStore'
 
-function RegisterPage() {
+function LoginPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [passwordConfirmation, setPasswordConfirmation] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const location = useLocation()
+
+  const {
+    email,
+    password,
+    rememberMe,
+    isLoading,
+    error,
+    successMessage,
+    setEmail,
+    setPassword,
+    setRememberMe,
+    setError,
+    setSuccessMessage,
+    handleLogin,
+  } = useLoginStore()
+
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message)
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state, setSuccessMessage])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      await register({
-        email,
-        password,
-        password_confirmation: passwordConfirmation,
-      })
-      // Redirect to login page after successful registration
-      navigate('/login', { 
-        state: { 
-          message: 'Registration successful! Please log in.' 
-        } 
-      })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed')
-    } finally {
-      setIsLoading(false)
+    const response = await handleLogin()
+    if (response) {
+      navigate('/dashboard/books', { state: { user: response.user } })
     }
   }
 
   return (
     <Box className="login-container">
       <Box className="login-backdrop" />
-      
+
       <Container maxWidth="xs">
-        <Paper 
+        <Paper
           elevation={0}
           sx={{
             position: 'relative',
@@ -81,42 +85,58 @@ function RegisterPage() {
                   animation: 'logoFloat 3s ease-in-out infinite',
                 }}
               >
-                <svg 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
-                  stroke="currentColor" 
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
                   strokeWidth="1.5"
                   style={{ width: 28, height: 28 }}
                 >
                   <path d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                 </svg>
               </Box>
-              <Typography 
-                variant="h4" 
+              <Typography
+                variant="h4"
                 component="h1"
                 sx={{
                   fontFamily: 'var(--font-display)',
                   fontWeight: 500,
                   color: 'var(--color-text)',
-                  mb: 1,
+                  marginBottom: 0.5,
                 }}
               >
-                Create Account
+                Welcome
               </Typography>
-              <Typography 
+              <Typography
                 variant="body2"
                 sx={{
                   color: 'var(--color-text-muted)',
                   fontFamily: 'var(--font-body)',
                 }}
               >
-                Sign up for a new Books account
+                Sign in to your Books account
               </Typography>
             </Box>
 
+            {/* Success Alert */}
+            {successMessage && (
+              <Alert
+                severity="success"
+                onClose={() => setSuccessMessage(null)}
+                sx={{
+                  borderRadius: 1,
+                  bgcolor: 'rgba(46, 125, 50, 0.1)',
+                  color: '#4caf50',
+                  border: '1px solid rgba(46, 125, 50, 0.3)',
+                }}
+              >
+                {successMessage}
+              </Alert>
+            )}
+
             {/* Error Alert */}
             {error && (
-              <Alert severity="error" sx={{ borderRadius: 1 }}>
+              <Alert severity="error" sx={{ borderRadius: 1 }} onClose={() => setError(null)}>
                 {error}
               </Alert>
             )}
@@ -165,7 +185,7 @@ function RegisterPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  autoComplete="new-password"
+                  autoComplete="current-password"
                   fullWidth
                   sx={{
                     '& .MuiOutlinedInput-root': {
@@ -190,38 +210,54 @@ function RegisterPage() {
                   }}
                 />
 
-                <TextField
-                  id="password_confirmation"
-                  type="password"
-                  label="Confirm Password"
-                  value={passwordConfirmation}
-                  onChange={(e) => setPasswordConfirmation(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  autoComplete="new-password"
-                  fullWidth
+                <Box
                   sx={{
-                    '& .MuiOutlinedInput-root': {
-                      backgroundColor: 'var(--color-bg)',
-                      color: 'var(--color-text)',
-                      '& fieldset': {
-                        borderColor: 'var(--color-border)',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: 'var(--color-accent)',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: 'var(--color-accent)',
-                      },
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: 'var(--color-text-muted)',
-                    },
-                    '& .MuiInputLabel-root.Mui-focused': {
-                      color: 'var(--color-accent)',
-                    },
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                   }}
-                />
+                >
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        sx={{
+                          color: 'var(--color-text-muted)',
+                          '&.Mui-checked': {
+                            color: 'var(--color-accent)',
+                          },
+                        }}
+                      />
+                    }
+                    label={
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: 'var(--color-text-muted)',
+                          fontFamily: 'var(--font-body)',
+                        }}
+                      >
+                        Remember me
+                      </Typography>
+                    }
+                  />
+                  <Link
+                    href="#"
+                    sx={{
+                      color: 'var(--color-accent)',
+                      textDecoration: 'none',
+                      fontSize: '0.875rem',
+                      fontFamily: 'var(--font-body)',
+                      '&:hover': {
+                        color: 'var(--color-accent-hover)',
+                        textDecoration: 'underline',
+                      },
+                    }}
+                  >
+                    Forgot password?
+                  </Link>
+                </Box>
 
                 <Button
                   type="submit"
@@ -251,7 +287,7 @@ function RegisterPage() {
                   {isLoading ? (
                     <CircularProgress size={20} sx={{ color: 'var(--color-bg)' }} />
                   ) : (
-                    'Create Account'
+                    'Sign in'
                   )}
                 </Button>
               </Stack>
@@ -266,10 +302,10 @@ function RegisterPage() {
                   fontFamily: 'var(--font-body)',
                 }}
               >
-                Already have an account?{' '}
+                Don't have an account?{' '}
                 <Link
                   component={RouterLink}
-                  to="/login"
+                  to="/register"
                   sx={{
                     color: 'var(--color-accent)',
                     textDecoration: 'none',
@@ -279,7 +315,7 @@ function RegisterPage() {
                     },
                   }}
                 >
-                  Sign in
+                  Create one
                 </Link>
               </Typography>
             </Box>
@@ -290,4 +326,4 @@ function RegisterPage() {
   )
 }
 
-export default RegisterPage
+export default LoginPage

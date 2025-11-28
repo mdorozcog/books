@@ -1,10 +1,8 @@
 import type { RouteObject } from "react-router";
 import { Navigate } from "react-router";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import HomePage from "./pages/HomePage";
-import BooksPage from "./pages/BooksPage";
-import AddBookPage from "./pages/AddBookPage";
+import { LoginPage, RegisterPage } from "./pages/authentication";
+import { HomePage } from "./pages/home";
+import { BooksPage, AddBookPage } from "./pages/books";
 
 export const routes: RouteObject[] = [
   {
