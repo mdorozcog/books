@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useLocation, Link as RouterLink } from 'react-router'
+import { useState } from 'react'
+import { useNavigate, Link as RouterLink } from 'react-router'
 import {
   Box,
   Container,
@@ -8,33 +8,20 @@ import {
   Button,
   Typography,
   Alert,
-  Checkbox,
-  FormControlLabel,
   Link,
   CircularProgress,
   Stack,
 } from '@mui/material'
 import '../App.css'
-import { login, setStoredToken } from '../lib/api'
+import { register } from '../lib/api'
 
-function LoginPage() {
+function RegisterPage() {
   const navigate = useNavigate()
-  const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordConfirmation, setPasswordConfirmation] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
-
-  useEffect(() => {
-    // Check if there's a success message from registration
-    if (location.state?.message) {
-      setSuccessMessage(location.state.message)
-      // Clear the state to prevent showing the message again on refresh
-      window.history.replaceState({}, document.title)
-    }
-  }, [location.state])
-  const [rememberMe, setRememberMe] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,14 +29,19 @@ function LoginPage() {
     setError(null)
 
     try {
-      const response = await login(email, password)
-      setStoredToken(response.token)
-      // Store user in localStorage for persistence
-      localStorage.setItem('user', JSON.stringify(response.user))
-      // Navigate to books page after successful login
-      navigate('/dashboard/books', { state: { user: response.user } })
+      await register({
+        email,
+        password,
+        password_confirmation: passwordConfirmation,
+      })
+      // Redirect to login page after successful registration
+      navigate('/login', { 
+        state: { 
+          message: 'Registration successful! Please log in.' 
+        } 
+      })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      setError(err instanceof Error ? err.message : 'Registration failed')
     } finally {
       setIsLoading(false)
     }
@@ -106,10 +98,10 @@ function LoginPage() {
                   fontFamily: 'var(--font-display)',
                   fontWeight: 500,
                   color: 'var(--color-text)',
-                  marginBottom: 0.5,
+                  mb: 1,
                 }}
               >
-                Welcome
+                Create Account
               </Typography>
               <Typography 
                 variant="body2"
@@ -118,25 +110,9 @@ function LoginPage() {
                   fontFamily: 'var(--font-body)',
                 }}
               >
-                Sign in to your Books account
+                Sign up for a new Books account
               </Typography>
             </Box>
-
-            {/* Success Alert */}
-            {successMessage && (
-              <Alert 
-                severity="success" 
-                onClose={() => setSuccessMessage(null)}
-                sx={{ 
-                  borderRadius: 1,
-                  bgcolor: 'rgba(46, 125, 50, 0.1)',
-                  color: '#4caf50',
-                  border: '1px solid rgba(46, 125, 50, 0.3)',
-                }}
-              >
-                {successMessage}
-              </Alert>
-            )}
 
             {/* Error Alert */}
             {error && (
@@ -189,7 +165,7 @@ function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   fullWidth
                   sx={{
                     '& .MuiOutlinedInput-root': {
@@ -214,54 +190,38 @@ function LoginPage() {
                   }}
                 />
 
-                <Box
+                <TextField
+                  id="password_confirmation"
+                  type="password"
+                  label="Confirm Password"
+                  value={passwordConfirmation}
+                  onChange={(e) => setPasswordConfirmation(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="new-password"
+                  fullWidth
                   sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <FormControlLabel
-                    control={
-                      <Checkbox
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                        sx={{
-                          color: 'var(--color-text-muted)',
-                          '&.Mui-checked': {
-                            color: 'var(--color-accent)',
-                          },
-                        }}
-                      />
-                    }
-                    label={
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: 'var(--color-text-muted)',
-                          fontFamily: 'var(--font-body)',
-                        }}
-                      >
-                        Remember me
-                      </Typography>
-                    }
-                  />
-                  <Link
-                    href="#"
-                    sx={{
-                      color: 'var(--color-accent)',
-                      textDecoration: 'none',
-                      fontSize: '0.875rem',
-                      fontFamily: 'var(--font-body)',
-                      '&:hover': {
-                        color: 'var(--color-accent-hover)',
-                        textDecoration: 'underline',
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'var(--color-bg)',
+                      color: 'var(--color-text)',
+                      '& fieldset': {
+                        borderColor: 'var(--color-border)',
                       },
-                    }}
-                  >
-                    Forgot password?
-                  </Link>
-                </Box>
+                      '&:hover fieldset': {
+                        borderColor: 'var(--color-accent)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: 'var(--color-accent)',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: 'var(--color-text-muted)',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: 'var(--color-accent)',
+                    },
+                  }}
+                />
 
                 <Button
                   type="submit"
@@ -291,7 +251,7 @@ function LoginPage() {
                   {isLoading ? (
                     <CircularProgress size={20} sx={{ color: 'var(--color-bg)' }} />
                   ) : (
-                    'Sign in'
+                    'Create Account'
                   )}
                 </Button>
               </Stack>
@@ -306,10 +266,10 @@ function LoginPage() {
                   fontFamily: 'var(--font-body)',
                 }}
               >
-                Don't have an account?{' '}
+                Already have an account?{' '}
                 <Link
                   component={RouterLink}
-                  to="/register"
+                  to="/login"
                   sx={{
                     color: 'var(--color-accent)',
                     textDecoration: 'none',
@@ -319,7 +279,7 @@ function LoginPage() {
                     },
                   }}
                 >
-                  Create one
+                  Sign in
                 </Link>
               </Typography>
             </Box>
@@ -330,4 +290,4 @@ function LoginPage() {
   )
 }
 
-export default LoginPage
+export default RegisterPage

@@ -62,6 +62,36 @@ export function removeStoredToken(): void {
   localStorage.removeItem("auth_token");
 }
 
+export interface RegisterParams {
+  email: string;
+  password: string;
+  password_confirmation: string;
+}
+
+export interface RegisterResponse {
+  email: string;
+  roles: string[];
+}
+
+export async function register(params: RegisterParams): Promise<RegisterResponse> {
+  const response = await fetch(`${API_ENDPOINT}/users`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ user: params }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const errorMessages = data.errors || [data.error || "Registration failed"];
+    throw new Error(Array.isArray(errorMessages) ? errorMessages.join(", ") : errorMessages);
+  }
+
+  return data as RegisterResponse;
+}
+
 export interface Book {
   id: number;
   title: string;

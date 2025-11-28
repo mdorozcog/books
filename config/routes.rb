@@ -15,6 +15,9 @@ Rails.application.routes.draw do
       post "login", to: "sessions#create"
       delete "logout", to: "sessions#destroy"
 
+      # Users
+      post "users", to: "users#create"
+
       # Books
       resources :books, only: [:index, :show, :create, :update, :destroy] do
         collection do
