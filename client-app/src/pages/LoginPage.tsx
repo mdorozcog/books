@@ -33,8 +33,10 @@ function LoginPage() {
     try {
       const response = await login(email, password)
       setStoredToken(response.token)
-      // Navigate to dashboard after successful login
-      navigate('/dashboard', { state: { user: response.user } })
+      // Store user in localStorage for persistence
+      localStorage.setItem('user', JSON.stringify(response.user))
+      // Navigate to books page after successful login
+      navigate('/dashboard/books', { state: { user: response.user } })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
