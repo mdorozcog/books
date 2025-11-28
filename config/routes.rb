@@ -24,6 +24,9 @@ Rails.application.routes.draw do
           post :search
         end
       end
+
+      # Borrows
+      resources :borrows, only: [:index, :show, :create, :update]
     end
   end
 end

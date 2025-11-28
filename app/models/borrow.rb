@@ -9,6 +9,23 @@ class Borrow < ApplicationRecord
     returned: 1
   }
 
+  PERMISSIONS = {
+    librarian: {
+      index: true,
+      show: true,
+      create: true,
+      update: true,
+      destroy: false
+    },
+    member: {
+      index: true,
+      show: true,
+      create: true,
+      update: false,
+      destroy: false
+    }
+  }
+
   private
 
   def book_has_available_copies
