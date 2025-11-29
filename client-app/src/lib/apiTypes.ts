@@ -96,5 +96,3 @@ export interface DashboardResponse {
   due_today_borrows: Borrow[];
   members_with_due_books: DashboardMemberWithDueBooks[] | null;
 }
-
-

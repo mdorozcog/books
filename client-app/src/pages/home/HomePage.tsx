@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { useEffect } from 'react'
 import {
   Box,
   Container,
@@ -22,17 +21,12 @@ import {
 } from '@mui/material'
 import DashboardLayout from '../../components/DashboardLayout'
 import '../../App.css'
-import { getStoredToken } from '../../lib/api'
 import { useHomeStore } from './useHomeStore'
+import { useUserStore } from '../../shared/stores/useUserStore'
 import { isOverdue, formatDate, getDaysUntilDue } from './utils'
-import type { User } from './types'
 
 function HomePage() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [user, setUser] = useState<User | null>(
-    (location.state as { user?: User })?.user || null
-  )
+  const { user, isLibrarian, isLoading: isUserLoading } = useUserStore()
   const {
     borrows,
     allBorrows,
@@ -46,36 +40,15 @@ function HomePage() {
   } = useHomeStore()
 
   useEffect(() => {
-    const token = getStoredToken()
-    if (!token) {
-      navigate('/login')
-      return
-    }
-
-    if (!user) {
-      const storedUser = localStorage.getItem('user')
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser))
-        } catch (e) {
-          // Invalid stored user
-        }
-      }
-    }
-  }, [navigate, user])
-
-  useEffect(() => {
     if (user) {
-      const isLibrarian = user.roles.includes('librarian')
       loadBorrows(user.id, isLibrarian)
     }
-  }, [user, loadBorrows])
+  }, [user, isLibrarian, loadBorrows])
 
   const overdueBorrows = borrows.filter((borrow) => isOverdue(borrow.due_at))
   const upcomingBorrows = borrows.filter((borrow) => !isOverdue(borrow.due_at))
 
-  const isLibrarian = user?.roles.includes('librarian') || false
-  const isAnyLoading = isLoading
+  const isAnyLoading = isLoading || isUserLoading
 
   const totalBooks = libraryStats?.total_books ?? 0
   const totalBorrowed = libraryStats?.total_borrowed ?? 0

@@ -1,9 +1,3 @@
-export interface User {
-  id: number
-  email: string
-  roles: string[]
-}
-
 export interface BorrowWithBook {
   id: number
   user_id: number

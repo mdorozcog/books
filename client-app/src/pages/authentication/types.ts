@@ -1,8 +1,4 @@
-export interface User {
-  id: number
-  email: string
-  roles: string[]
-}
+import type { User } from '../../shared/types'
 
 export interface LoginResponse {
   message: string

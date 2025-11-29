@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { useEffect } from 'react'
 import {
   Box,
   Container,
@@ -23,9 +22,8 @@ import {
 } from '@mui/material'
 import DashboardLayout from '../../components/DashboardLayout'
 import '../../App.css'
-import { getStoredToken } from '../../lib/api'
 import { useBooksStore } from './useBooksStore'
-import type { User } from './types'
+import { useUserStore } from '../../shared/stores/useUserStore'
 
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 20, height: 20 }}>
@@ -42,12 +40,7 @@ const ClearIcon = () => (
 )
 
 function BooksPage() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [user, setUser] = useState<User | null>(
-    (location.state as { user?: User })?.user || null
-  )
-
+  const { user } = useUserStore()
   const {
     books,
     isLoading,
@@ -73,28 +66,11 @@ function BooksPage() {
   } = useBooksStore()
 
   useEffect(() => {
-    const token = getStoredToken()
-    if (!token) {
-      navigate('/login')
-      return
-    }
-
-    if (!user) {
-      const storedUser = localStorage.getItem('user')
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser))
-        } catch (e) {
-          // Invalid stored user
-        }
-      }
-    }
-
     loadBooks()
     if (user) {
       loadBorrows()
     }
-  }, [navigate, user, loadBooks, loadBorrows])
+  }, [user, loadBooks, loadBorrows])
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {

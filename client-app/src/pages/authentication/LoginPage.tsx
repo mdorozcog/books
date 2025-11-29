@@ -47,7 +47,7 @@ function LoginPage() {
     e.preventDefault()
     const response = await handleLogin()
     if (response) {
-      navigate('/dashboard/books', { state: { user: response.user } })
+      navigate('/dashboard/home', { state: { user: response.user } })
     }
   }
 

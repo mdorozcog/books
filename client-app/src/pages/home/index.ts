@@ -1,6 +1,6 @@
 export { default as HomePage } from './HomePage'
 
-export type { User, BorrowWithBook } from './types'
+export type { BorrowWithBook } from './types'
 
 export { homeService } from './homeService'
 

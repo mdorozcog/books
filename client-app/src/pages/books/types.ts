@@ -1,9 +1,3 @@
-export interface User {
-  id: number
-  email: string
-  roles: string[]
-}
-
 export interface Book {
   id: number
   title: string

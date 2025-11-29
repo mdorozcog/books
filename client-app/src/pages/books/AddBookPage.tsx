@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router'
+import { useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router'
 import {
   Box,
   Container,
@@ -14,9 +14,8 @@ import {
 } from '@mui/material'
 import DashboardLayout from '../../components/DashboardLayout'
 import '../../App.css'
-import { getStoredToken } from '../../lib/api'
 import { useAddBookStore } from './useAddBookStore'
-import type { User } from './types'
+import { useUserStore } from '../../shared/stores/useUserStore'
 
 const genres = [
   'Fiction',
@@ -38,13 +37,10 @@ const genres = [
 ]
 
 function AddBookPage() {
-  const location = useLocation()
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
   const isEditMode = !!id
-  const [user, setUser] = useState<User | null>(
-    (location.state as { user?: User })?.user || null
-  )
+  const { user, isLibrarian } = useUserStore()
 
   const {
     formData,
@@ -60,27 +56,10 @@ function AddBookPage() {
   } = useAddBookStore()
 
   useEffect(() => {
-    const token = getStoredToken()
-    if (!token) {
-      navigate('/login')
-      return
-    }
-
-    if (!user) {
-      const storedUser = localStorage.getItem('user')
-      if (storedUser) {
-        try {
-          setUser(JSON.parse(storedUser))
-        } catch (e) {
-          // Invalid stored user
-        }
-      }
-    }
-
-    if (user && !user.roles.includes('librarian')) {
+    if (user && !isLibrarian) {
       navigate('/dashboard/books')
     }
-  }, [navigate, user])
+  }, [navigate, user, isLibrarian])
 
   useEffect(() => {
     if (isEditMode && id) {
