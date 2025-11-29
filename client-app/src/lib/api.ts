@@ -66,6 +66,7 @@ export interface RegisterParams {
   email: string;
   password: string;
   password_confirmation: string;
+  roles?: string[];
 }
 
 export interface RegisterResponse {

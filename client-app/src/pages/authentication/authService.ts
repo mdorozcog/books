@@ -25,6 +25,7 @@ export const authService = {
       email: params.email,
       password: params.password,
       password_confirmation: params.password_confirmation,
+      roles: params.roles,
     }
     const apiResponse = await apiRegister(apiParams)
     return {
