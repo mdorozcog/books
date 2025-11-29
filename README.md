@@ -99,7 +99,9 @@ In a second Devbox shell:
 
 ```bash
 cd client-app
+# One time only
 cp .example.env .env
+
 npm run dev
 ```
 

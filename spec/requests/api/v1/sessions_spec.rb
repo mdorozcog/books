@@ -96,3 +96,4 @@ RSpec.describe "Api::V1::Sessions", type: :request do
     end
   end
 end
+
