@@ -28,3 +28,36 @@ export interface BorrowWithBook {
     email: string
   }
 }
+
+export interface UpdateBorrowParams {
+  status?: string
+  due_at?: string
+}
+
+export interface DashboardLibraryStats {
+  total_books: number
+  total_borrowed: number
+  available_books: number
+}
+
+export interface DashboardUserStats {
+  borrowed_count: number
+  due_today_count: number
+  overdue_count: number
+}
+
+export interface DashboardMemberWithDueBooks {
+  user_id: number
+  email: string
+  due_books_count: number
+}
+
+export interface DashboardResponse {
+  role: string | null
+  library_stats: DashboardLibraryStats | null
+  user_stats: DashboardUserStats
+  borrows: BorrowWithBook[]
+  all_borrows: BorrowWithBook[] | null
+  due_today_borrows: BorrowWithBook[]
+  members_with_due_books: DashboardMemberWithDueBooks[] | null
+}

@@ -1,19 +1,14 @@
-import {
-  fetchDashboard as apiFetchDashboard,
-  updateBorrow as apiUpdateBorrow,
-  type Borrow,
-  type UpdateBorrowParams,
-  type DashboardResponse,
-} from '../../lib/api'
+import { get, patch } from '../../lib/api'
+import type { DashboardResponse, UpdateBorrowParams, BorrowWithBook } from './types'
 
 export const homeService = {
   async fetchDashboard(): Promise<DashboardResponse> {
-    return apiFetchDashboard()
+    return get<DashboardResponse>('/dashboard')
   },
 
-  async updateBorrow(id: number, params: UpdateBorrowParams): Promise<Borrow> {
-    return apiUpdateBorrow(id, params)
+  async updateBorrow(id: number, params: UpdateBorrowParams): Promise<BorrowWithBook> {
+    return patch<UpdateBorrowParams, BorrowWithBook>(`/borrows/${id}`, params, 'borrow')
   },
 }
 
-export type { Borrow, UpdateBorrowParams, DashboardResponse }
+export type { DashboardResponse, UpdateBorrowParams, BorrowWithBook }

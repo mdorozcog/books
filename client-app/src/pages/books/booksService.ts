@@ -1,55 +1,47 @@
-import {
-  fetchBooks as apiFetchBooks,
-  fetchBook as apiFetchBook,
-  searchBooks as apiSearchBooks,
-  createBook as apiCreateBook,
-  updateBook as apiUpdateBook,
-  deleteBook as apiDeleteBook,
-  createBorrow as apiCreateBorrow,
-  fetchBorrows as apiFetchBorrows,
-  updateBorrow as apiUpdateBorrow,
-  type Book,
-  type Borrow,
-  type CreateBookParams,
-  type CreateBorrowParams,
-  type UpdateBorrowParams,
-} from '../../lib/api'
+import { get, post, put, patch, del } from '../../lib/api'
+import type {
+  Book,
+  Borrow,
+  CreateBookParams,
+  CreateBorrowParams,
+  UpdateBorrowParams,
+} from './types'
 
 export const booksService = {
   async fetchBooks(): Promise<Book[]> {
-    return apiFetchBooks()
+    return get<Book[]>('/books')
   },
 
   async fetchBook(id: number): Promise<Book> {
-    return apiFetchBook(id)
+    return get<Book>(`/books/${id}`)
   },
 
   async searchBooks(query: string): Promise<Book[]> {
-    return apiSearchBooks(query)
+    return post<{ q: string }, Book[]>('/books/search', { q: query })
   },
 
   async createBook(book: CreateBookParams): Promise<Book> {
-    return apiCreateBook(book)
+    return post<CreateBookParams, Book>('/books', book, 'book')
   },
 
   async updateBook(id: number, book: CreateBookParams): Promise<Book> {
-    return apiUpdateBook(id, book)
+    return put<CreateBookParams, Book>(`/books/${id}`, book, 'book')
   },
 
   async deleteBook(id: number): Promise<void> {
-    return apiDeleteBook(id)
+    return del(`/books/${id}`)
   },
 
   async createBorrow(params: CreateBorrowParams): Promise<Borrow> {
-    return apiCreateBorrow(params)
+    return post<CreateBorrowParams, Borrow>('/borrows', params, 'borrow')
   },
 
   async fetchBorrows(): Promise<Borrow[]> {
-    return apiFetchBorrows()
+    return get<Borrow[]>('/borrows')
   },
 
   async updateBorrow(id: number, params: UpdateBorrowParams): Promise<Borrow> {
-    return apiUpdateBorrow(id, params)
+    return patch<UpdateBorrowParams, Borrow>(`/borrows/${id}`, params, 'borrow')
   },
 }
 

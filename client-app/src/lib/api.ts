@@ -1,48 +1,66 @@
 import { API_ENDPOINT } from './apiConfig';
-import type {
-  LoginResponse,
-  ApiError,
-  RegisterParams,
-  RegisterResponse,
-  Book,
-  CreateBookParams,
-  CreateBorrowParams,
-  Borrow,
-  UpdateBorrowParams,
-  DashboardResponse,
-} from './apiTypes';
 
-export async function login(email: string, password: string): Promise<LoginResponse> {
-  const response = await fetch(`${API_ENDPOINT}/login`, {
-    method: "POST",
+export interface ApiError {
+  error?: string;
+  errors?: string[];
+}
+
+
+async function request<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const response = await fetch(`${API_ENDPOINT}${endpoint}`, {
+    ...options,
     headers: {
       "Content-Type": "application/json",
+      ...options.headers,
     },
-    body: JSON.stringify({ email, password }),
   });
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error((data as ApiError).error || "Login failed");
+    const error = (data as ApiError).error || (data as ApiError).errors?.join(", ") || "Request failed";
+    throw new Error(error);
   }
 
-  return data as LoginResponse;
+  return data as T;
+}
+
+async function authenticatedRequest<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const token = getStoredToken();
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+
+  return request<T>(endpoint, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...options.headers,
+    },
+  });
+}
+
+export async function login<T>(email: string, password: string): Promise<T> {
+  return request<T>("/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
 }
 
 export async function logout(token: string): Promise<void> {
-  const response = await fetch(`${API_ENDPOINT}/logout`, {
+  await fetch(`${API_ENDPOINT}/logout`, {
     method: "DELETE",
     headers: {
-      "Authorization": `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
   });
-
-  if (!response.ok) {
-    const data = await response.json();
-    throw new Error((data as ApiError).error || "Logout failed");
-  }
 }
 
 export function getStoredToken(): string | null {
@@ -57,275 +75,58 @@ export function removeStoredToken(): void {
   localStorage.removeItem("auth_token");
 }
 
-export async function register(params: RegisterParams): Promise<RegisterResponse> {
-  const response = await fetch(`${API_ENDPOINT}/users`, {
+export async function register<TRequest, TResponse>(
+  params: TRequest
+): Promise<TResponse> {
+  return request<TResponse>("/users", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({ user: params }),
   });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    const errorMessages = data.errors || [data.error || "Registration failed"];
-    throw new Error(Array.isArray(errorMessages) ? errorMessages.join(", ") : errorMessages);
-  }
-
-  return data as RegisterResponse;
 }
 
-export async function fetchBooks(): Promise<Book[]> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-
-  const response = await fetch(`${API_ENDPOINT}/books`, {
-    method: "GET",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error((data as ApiError).error || "Failed to fetch books");
-  }
-
-  return data as Book[];
+export async function get<T>(endpoint: string): Promise<T> {
+  return authenticatedRequest<T>(endpoint, { method: "GET" });
 }
 
-export async function fetchBook(id: number): Promise<Book> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-
-  const response = await fetch(`${API_ENDPOINT}/books/${id}`, {
-    method: "GET",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error((data as ApiError).error || "Failed to fetch book");
-  }
-
-  return data as Book;
-}
-
-export async function searchBooks(query: string): Promise<Book[]> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-
-  const response = await fetch(`${API_ENDPOINT}/books/search`, {
+export async function post<TRequest, TResponse>(
+  endpoint: string,
+  body: TRequest,
+  wrapperKey?: string
+): Promise<TResponse> {
+  const payload = wrapperKey ? { [wrapperKey]: body } : body;
+  return authenticatedRequest<TResponse>(endpoint, {
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ q: query }),
+    body: JSON.stringify(payload),
   });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error((data as ApiError).error || "Failed to search books");
-  }
-
-  return data as Book[];
 }
 
-export async function createBook(book: CreateBookParams): Promise<Book> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-
-  const response = await fetch(`${API_ENDPOINT}/books`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ book }),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    const errorMessages = data.errors || [data.error || "Failed to create book"];
-    throw new Error(Array.isArray(errorMessages) ? errorMessages.join(", ") : errorMessages);
-  }
-
-  return data as Book;
-}
-
-export async function updateBook(id: number, book: CreateBookParams): Promise<Book> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-
-  const response = await fetch(`${API_ENDPOINT}/books/${id}`, {
+export async function put<TRequest, TResponse>(
+  endpoint: string,
+  body: TRequest,
+  wrapperKey?: string
+): Promise<TResponse> {
+  const payload = wrapperKey ? { [wrapperKey]: body } : body;
+  return authenticatedRequest<TResponse>(endpoint, {
     method: "PUT",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ book }),
+    body: JSON.stringify(payload),
   });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    const errorMessages = data.errors || [data.error || "Failed to update book"];
-    throw new Error(Array.isArray(errorMessages) ? errorMessages.join(", ") : errorMessages);
-  }
-
-  return data as Book;
 }
 
-export async function deleteBook(id: number): Promise<void> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-
-  const response = await fetch(`${API_ENDPOINT}/books/${id}`, {
-    method: "DELETE",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    const data = await response.json();
-    const errorMessages = data.errors || [data.error || "Failed to delete book"];
-    throw new Error(Array.isArray(errorMessages) ? errorMessages.join(", ") : errorMessages);
-  }
-}
-
-export async function createBorrow(params: CreateBorrowParams): Promise<Borrow> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-
-  const response = await fetch(`${API_ENDPOINT}/borrows`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ borrow: params }),
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    const errorMessages = data.errors || [data.error || "Failed to borrow book"];
-    throw new Error(Array.isArray(errorMessages) ? errorMessages.join(", ") : errorMessages);
-  }
-
-  return data as Borrow;
-}
-
-export async function fetchBorrows(): Promise<Borrow[]> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-
-  const response = await fetch(`${API_ENDPOINT}/borrows`, {
-    method: "GET",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error((data as ApiError).error || "Failed to fetch borrows");
-  }
-
-  return data as Borrow[];
-}
-
-export async function updateBorrow(id: number, params: UpdateBorrowParams): Promise<Borrow> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-
-  const response = await fetch(`${API_ENDPOINT}/borrows/${id}`, {
+export async function patch<TRequest, TResponse>(
+  endpoint: string,
+  body: TRequest,
+  wrapperKey?: string
+): Promise<TResponse> {
+  const payload = wrapperKey ? { [wrapperKey]: body } : body;
+  return authenticatedRequest<TResponse>(endpoint, {
     method: "PATCH",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ borrow: params }),
+    body: JSON.stringify(payload),
   });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    const errorMessages = data.errors || [data.error || "Failed to update borrow"];
-    throw new Error(Array.isArray(errorMessages) ? errorMessages.join(", ") : errorMessages);
-  }
-
-  return data as Borrow;
 }
 
-export async function fetchDashboard(): Promise<DashboardResponse> {
-  const token = getStoredToken();
-  if (!token) {
-    throw new Error("No authentication token found");
-  }
-
-  const response = await fetch(`${API_ENDPOINT}/dashboard`, {
-    method: "GET",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    const error = (data as ApiError).error || (data.error as string) || "Failed to fetch dashboard";
-    throw new Error(error);
-  }
-
-  return data as DashboardResponse;
+export async function del(endpoint: string): Promise<void> {
+  return authenticatedRequest<void>(endpoint, { method: "DELETE" });
 }
 
-// Re-export types so existing imports from './api' keep working
-export type {
-  LoginResponse,
-  ApiError,
-  RegisterParams,
-  RegisterResponse,
-  Book,
-  CreateBookParams,
-  CreateBorrowParams,
-  Borrow,
-  UpdateBorrowParams,
-  DashboardResponse,
-};
 
 

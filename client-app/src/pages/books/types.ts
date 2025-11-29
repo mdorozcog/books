@@ -30,3 +30,21 @@ export interface Borrow {
     email: string
   }
 }
+
+export interface CreateBookParams {
+  title: string
+  author: string
+  genre: string
+  isbn: string
+  copies: number
+}
+
+export interface CreateBorrowParams {
+  book_id: number
+  due_at?: string
+}
+
+export interface UpdateBorrowParams {
+  status?: string
+  due_at?: string
+}

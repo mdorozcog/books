@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { homeService, type Borrow, type DashboardResponse } from './homeService'
+import { homeService, type DashboardResponse } from './homeService'
 import type { BorrowWithBook } from './types'
 
 interface UseHomeStoreReturn {
