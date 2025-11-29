@@ -215,4 +215,3 @@ RSpec.describe "Api::V1::Dashboard", type: :request do
     end
   end
 end
-

@@ -9,4 +9,3 @@ class Role < ApplicationRecord
   validates :name, presence: true, uniqueness: true
   validates :name, inclusion: { in: VALID_ROLES, message: "%{value} is not a valid role" }
 end
-
