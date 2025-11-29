@@ -1,24 +1,123 @@
-# README
+## Books App Monorepo
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+This repository is a **monorepo** containing:
 
-Things you may want to cover:
+- **Rails API backend** (`app`, `config`, `spec`, etc.) that exposes JSON endpoints for:
+  - authentication and user registration (with roles: `member`, `librarian`)
+  - books catalog (with available copies tracking)
+  - borrows (borrow/return flow with due dates)
+  - a dashboard endpoint that summarizes library and user stats
+- **React + Vite frontend** in `client-app/` that:
+  - provides login/registration flows
+  - offers a dashboard showing borrowed books, overdue / due-today items
+  - for librarians, shows global stats (total books, borrowed, available) and management views
 
-* Ruby version
+The backend and frontend are designed to work together but can be developed and tested independently.
 
-* System dependencies
+---
 
-* Configuration
+## Dev environment (Devbox)
 
-* Database creation
+Using **Devbox** is highly recommended to get a working environment **fast and consistently**.
 
-* Database initialization
+Devbox configuration (`devbox.json`) installs:
 
-* How to run the test suite
+- `ruby@3.4.5`
+- `bundler@2.7.2`
+- `nodejs@24`
 
-* Services (job queues, cache servers, search engines, etc.)
+### 1. Enter a Devbox shell
 
-* Deployment instructions
+From the repo root:
 
-* ...
+```bash
+devbox shell
+```
+
+You should see `Books Shell` printed when the shell starts.
+
+### 2. Install dependencies
+
+Use the provided Devbox script to install both backend and frontend dependencies:
+
+```bash
+devbox run install
+```
+
+This runs:
+
+- `bundle install`
+- `cd client-app; npm install`
+
+### 3. Setup the database
+
+Within the Devbox shell:
+
+```bash
+devbox run db_setup
+```
+
+This runs:
+
+- `rails db:create`
+- `rails db:migrate`
+
+You can also seed or reset the database using standard Rails tasks if needed:
+
+```bash
+rails db:seed
+rails db:reset
+```
+
+### 4. Running the backend
+
+Still inside the Devbox shell:
+
+```bash
+rails server
+```
+
+By default this will start the Rails API server on `localhost:3000`.
+
+### 5. Running the frontend (client)
+
+In a second Devbox shell (or from the first, after `cd client-app`):
+
+```bash
+cd client-app
+npm run dev
+```
+
+This starts the Vite development server (typically on `localhost:5173`), which proxies API calls to the Rails backend according to your Vite/Env configuration.
+
+---
+
+## Tests
+
+From the repo root, inside the Devbox shell:
+
+```bash
+devbox run test
+```
+
+This runs the Rails test suite:
+
+```bash
+rspec spec
+```
+
+You can also run RSpec directly or run frontend tests (if added) from `client-app` as needed.
+
+---
+
+## Summary
+
+- This is a **monorepo** with:
+  - **Rails API backend** (auth, books, borrows, dashboard)
+  - **React/Vite frontend** in `client-app/`
+- **Devbox** is the recommended way to:
+  - install toolchain and dependencies (`devbox run install`)
+  - setup the database (`devbox run db_setup`)
+  - run tests (`devbox run test`)
+- Start backend with `rails server` and frontend with `npm run dev` inside `client-app`.
+
