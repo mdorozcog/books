@@ -18,6 +18,9 @@ Rails.application.routes.draw do
       # Users
       post "users", to: "users#create"
 
+      # Dashboard
+      get "dashboard", to: "dashboard#show"
+
       # Books
       resources :books, only: [ :index, :show, :create, :update, :destroy ] do
         collection do

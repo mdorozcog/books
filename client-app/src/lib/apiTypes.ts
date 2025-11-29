@@ -69,3 +69,31 @@ export interface UpdateBorrowParams {
   due_at?: string;
 }
 
+export interface DashboardLibraryStats {
+  total_books: number;
+  total_borrowed: number;
+  available_books: number;
+}
+
+export interface DashboardUserStats {
+  borrowed_count: number;
+  due_today_count: number;
+  overdue_count: number;
+}
+
+export interface DashboardMemberWithDueBooks {
+  user_id: number;
+  email: string;
+  due_books_count: number;
+}
+
+export interface DashboardResponse {
+  role: string | null;
+  library_stats: DashboardLibraryStats | null;
+  user_stats: DashboardUserStats;
+  borrows: Borrow[];
+  all_borrows: Borrow[] | null;
+  due_today_borrows: Borrow[];
+  members_with_due_books: DashboardMemberWithDueBooks[] | null;
+}
+

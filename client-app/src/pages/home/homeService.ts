@@ -1,13 +1,14 @@
 import {
-  fetchBorrows as apiFetchBorrows,
+  fetchDashboard as apiFetchDashboard,
   updateBorrow as apiUpdateBorrow,
   type Borrow,
   type UpdateBorrowParams,
+  type DashboardResponse,
 } from '../../lib/api'
 
 export const homeService = {
-  async fetchBorrows(): Promise<Borrow[]> {
-    return apiFetchBorrows()
+  async fetchDashboard(): Promise<DashboardResponse> {
+    return apiFetchDashboard()
   },
 
   async updateBorrow(id: number, params: UpdateBorrowParams): Promise<Borrow> {
@@ -15,4 +16,4 @@ export const homeService = {
   },
 }
 
-export type { Borrow, UpdateBorrowParams }
+export type { Borrow, UpdateBorrowParams, DashboardResponse }

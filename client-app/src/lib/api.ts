@@ -9,6 +9,7 @@ import type {
   CreateBorrowParams,
   Borrow,
   UpdateBorrowParams,
+  DashboardResponse,
 } from './apiTypes';
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
@@ -289,6 +290,30 @@ export async function updateBorrow(id: number, params: UpdateBorrowParams): Prom
   return data as Borrow;
 }
 
+export async function fetchDashboard(): Promise<DashboardResponse> {
+  const token = getStoredToken();
+  if (!token) {
+    throw new Error("No authentication token found");
+  }
+
+  const response = await fetch(`${API_ENDPOINT}/dashboard`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const error = (data as ApiError).error || (data.error as string) || "Failed to fetch dashboard";
+    throw new Error(error);
+  }
+
+  return data as DashboardResponse;
+}
+
 // Re-export types so existing imports from './api' keep working
 export type {
   LoginResponse,
@@ -300,6 +325,7 @@ export type {
   CreateBorrowParams,
   Borrow,
   UpdateBorrowParams,
+  DashboardResponse,
 };
 
 

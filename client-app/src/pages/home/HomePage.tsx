@@ -22,7 +22,7 @@ import {
 } from '@mui/material'
 import DashboardLayout from '../../components/DashboardLayout'
 import '../../App.css'
-import { getStoredToken, fetchBooks, type Book } from '../../lib/api'
+import { getStoredToken } from '../../lib/api'
 import { useHomeStore } from './useHomeStore'
 import { isOverdue, formatDate, getDaysUntilDue } from './utils'
 import type { User } from './types'
@@ -33,12 +33,10 @@ function HomePage() {
   const [user, setUser] = useState<User | null>(
     (location.state as { user?: User })?.user || null
   )
-  const [books, setBooks] = useState<Book[]>([])
-  const [isBooksLoading, setIsBooksLoading] = useState(false)
-
   const {
     borrows,
     allBorrows,
+    libraryStats,
     isLoading,
     error,
     returningBorrowId,
@@ -67,22 +65,6 @@ function HomePage() {
   }, [navigate, user])
 
   useEffect(() => {
-    const loadBooks = async () => {
-      setIsBooksLoading(true)
-      try {
-        const data = await fetchBooks()
-        setBooks(data)
-      } catch (e) {
-        // Silently ignore book loading errors; main borrows flow still works
-      } finally {
-        setIsBooksLoading(false)
-      }
-    }
-
-    loadBooks()
-  }, [])
-
-  useEffect(() => {
     if (user) {
       const isLibrarian = user.roles.includes('librarian')
       loadBorrows(user.id, isLibrarian)
@@ -93,12 +75,11 @@ function HomePage() {
   const upcomingBorrows = borrows.filter((borrow) => !isOverdue(borrow.due_at))
 
   const isLibrarian = user?.roles.includes('librarian') || false
-  const isAnyLoading = isLoading || isBooksLoading
+  const isAnyLoading = isLoading
 
-  const totalBooks = books.reduce((sum, book) => sum + (book.copies ?? 0), 0)
-  const totalBorrowed = isLibrarian ? allBorrows.length : borrows.length
-  const availableBooks = Math.max(totalBooks - totalBorrowed, 0)
-
+  const totalBooks = libraryStats?.total_books ?? 0
+  const totalBorrowed = libraryStats?.total_borrowed ?? 0
+  const availableBooks = libraryStats?.available_books ?? 0
   const pieBorrowedPercentage =
     totalBooks > 0 ? Math.min(100, Math.round((totalBorrowed / totalBooks) * 100)) : 0
 

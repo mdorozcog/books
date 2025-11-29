@@ -1,10 +1,11 @@
 import { useState, useCallback } from 'react'
-import { homeService, type Borrow } from './homeService'
+import { homeService, type Borrow, type DashboardResponse } from './homeService'
 import type { BorrowWithBook } from './types'
 
 interface UseHomeStoreReturn {
   borrows: BorrowWithBook[]
   allBorrows: BorrowWithBook[]
+  libraryStats: DashboardResponse['library_stats']
   isLoading: boolean
   error: string | null
   returningBorrowId: number | null
@@ -17,6 +18,7 @@ interface UseHomeStoreReturn {
 export function useHomeStore(): UseHomeStoreReturn {
   const [borrows, setBorrows] = useState<BorrowWithBook[]>([])
   const [allBorrows, setAllBorrows] = useState<BorrowWithBook[]>([])
+  const [libraryStats, setLibraryStats] = useState<DashboardResponse['library_stats']>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [returningBorrowId, setReturningBorrowId] = useState<number | null>(null)
@@ -26,18 +28,19 @@ export function useHomeStore(): UseHomeStoreReturn {
       setIsLoading(true)
       setError(null)
       try {
-        const data = await homeService.fetchBorrows()
-        const activeBorrows = data.filter(
-          (borrow) => borrow.status === 'borrowed'
-        ) as BorrowWithBook[]
+        const dashboard = await homeService.fetchDashboard()
+        const activeBorrows = dashboard.borrows as BorrowWithBook[]
 
         if (isLibrarian) {
-          setAllBorrows(activeBorrows)
-          const myBorrows = activeBorrows.filter((borrow) => borrow.user_id === userId)
+          const allActive = (dashboard.all_borrows || []) as BorrowWithBook[]
+          setAllBorrows(allActive)
+          const myBorrows = allActive.filter((borrow) => borrow.user_id === userId)
           setBorrows(myBorrows)
         } else {
           setBorrows(activeBorrows)
         }
+
+        setLibraryStats(dashboard.library_stats)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load borrows')
       } finally {
@@ -66,6 +69,7 @@ export function useHomeStore(): UseHomeStoreReturn {
   return {
     borrows,
     allBorrows,
+    libraryStats,
     isLoading,
     error,
     returningBorrowId,
