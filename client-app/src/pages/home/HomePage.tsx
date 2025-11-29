@@ -22,7 +22,7 @@ import {
 } from '@mui/material'
 import DashboardLayout from '../../components/DashboardLayout'
 import '../../App.css'
-import { getStoredToken } from '../../lib/api'
+import { getStoredToken, fetchBooks, type Book } from '../../lib/api'
 import { useHomeStore } from './useHomeStore'
 import { isOverdue, formatDate, getDaysUntilDue } from './utils'
 import type { User } from './types'
@@ -33,6 +33,8 @@ function HomePage() {
   const [user, setUser] = useState<User | null>(
     (location.state as { user?: User })?.user || null
   )
+  const [books, setBooks] = useState<Book[]>([])
+  const [isBooksLoading, setIsBooksLoading] = useState(false)
 
   const {
     borrows,
@@ -65,6 +67,22 @@ function HomePage() {
   }, [navigate, user])
 
   useEffect(() => {
+    const loadBooks = async () => {
+      setIsBooksLoading(true)
+      try {
+        const data = await fetchBooks()
+        setBooks(data)
+      } catch (e) {
+        // Silently ignore book loading errors; main borrows flow still works
+      } finally {
+        setIsBooksLoading(false)
+      }
+    }
+
+    loadBooks()
+  }, [])
+
+  useEffect(() => {
     if (user) {
       const isLibrarian = user.roles.includes('librarian')
       loadBorrows(user.id, isLibrarian)
@@ -75,6 +93,30 @@ function HomePage() {
   const upcomingBorrows = borrows.filter((borrow) => !isOverdue(borrow.due_at))
 
   const isLibrarian = user?.roles.includes('librarian') || false
+  const isAnyLoading = isLoading || isBooksLoading
+
+  const totalBooks = books.reduce((sum, book) => sum + (book.copies ?? 0), 0)
+  const totalBorrowed = isLibrarian ? allBorrows.length : borrows.length
+  const availableBooks = Math.max(totalBooks - totalBorrowed, 0)
+
+  const pieBorrowedPercentage =
+    totalBooks > 0 ? Math.min(100, Math.round((totalBorrowed / totalBooks) * 100)) : 0
+
+  const todaySource = isLibrarian ? allBorrows : borrows
+  const todayDueBorrows = todaySource.filter((borrow) => getDaysUntilDue(borrow.due_at) === 0)
+
+  const membersWithDueBooksMap = new Map<string, number>()
+  ;(isLibrarian ? allBorrows : borrows).forEach((borrow) => {
+    const daysUntilDue = getDaysUntilDue(borrow.due_at)
+    if (daysUntilDue !== null && daysUntilDue <= 0) {
+      const email = borrow.user?.email || 'Unknown User'
+      membersWithDueBooksMap.set(email, (membersWithDueBooksMap.get(email) || 0) + 1)
+    }
+  })
+
+  const membersWithDueBooks = Array.from(membersWithDueBooksMap.entries()).map(
+    ([email, count]) => ({ email, count })
+  )
 
   if (!user) {
     return null
@@ -127,15 +169,353 @@ function HomePage() {
           )}
 
           {/* Loading State */}
-          {isLoading && (
+          {isAnyLoading && (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
               <CircularProgress sx={{ color: 'var(--color-accent)' }} />
             </Box>
           )}
 
           {/* Content */}
-          {!isLoading && !error && (
+          {!isAnyLoading && !error && (
             <>
+              {/* Summary / Pie Chart Section (librarian only) */}
+              {isLibrarian && (
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 2fr)' },
+                    gap: 3,
+                  }}
+                >
+                  <Box>
+                    <Card
+                      sx={{
+                        bgcolor: 'var(--color-surface)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 2,
+                        height: '100%',
+                      }}
+                    >
+                      <CardContent>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            fontFamily: 'var(--font-display)',
+                            fontWeight: 500,
+                            color: 'var(--color-text)',
+                            mb: 2,
+                          }}
+                        >
+                          Library Overview
+                        </Typography>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              position: 'relative',
+                              width: 120,
+                              height: 120,
+                            }}
+                          >
+                            <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%' }}>
+                              <path
+                                d="M18 2.0845
+                                a 15.9155 15.9155 0 0 1 0 31.831
+                                a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="rgba(255,255,255,0.08)"
+                                strokeWidth="2.5"
+                              />
+                              <path
+                                d="M18 2.0845
+                                a 15.9155 15.9155 0 0 1 0 31.831
+                                a 15.9155 15.9155 0 0 1 0 -31.831"
+                                fill="none"
+                                stroke="var(--color-accent)"
+                                strokeWidth="2.8"
+                                strokeDasharray={`${pieBorrowedPercentage}, 100`}
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                inset: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexDirection: 'column',
+                              }}
+                            >
+                              <Typography
+                                variant="h6"
+                                sx={{
+                                  fontFamily: 'var(--font-display)',
+                                  fontWeight: 600,
+                                  color: 'var(--color-text)',
+                                }}
+                              >
+                                {totalBorrowed}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  color: 'var(--color-text-muted)',
+                                  fontFamily: 'var(--font-body)',
+                                }}
+                              >
+                                Borrowed
+                              </Typography>
+                            </Box>
+                          </Box>
+                          <Stack spacing={1}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: 'var(--color-text-muted)',
+                                fontFamily: 'var(--font-body)',
+                              }}
+                            >
+                              Total books:{' '}
+                              <Typography
+                                component="span"
+                                sx={{
+                                  color: 'var(--color-text)',
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {totalBooks}
+                              </Typography>
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: 'var(--color-text-muted)',
+                                fontFamily: 'var(--font-body)',
+                              }}
+                            >
+                              Borrowed:{' '}
+                              <Typography
+                                component="span"
+                                sx={{
+                                  color: 'var(--color-text)',
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {totalBorrowed}
+                              </Typography>
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: 'var(--color-text-muted)',
+                                fontFamily: 'var(--font-body)',
+                              }}
+                            >
+                              Available:{' '}
+                              <Typography
+                                component="span"
+                                sx={{
+                                  color: 'var(--color-text)',
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {availableBooks}
+                              </Typography>
+                            </Typography>
+                          </Stack>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                      gap: 3,
+                    }}
+                  >
+                    <Box>
+                      <Paper
+                        elevation={0}
+                        sx={{
+                          p: 2,
+                          bgcolor: 'var(--color-surface)',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: 2,
+                          height: '100%',
+                        }}
+                      >
+                        <Typography
+                          variant="subtitle1"
+                          sx={{
+                            fontFamily: 'var(--font-display)',
+                            fontWeight: 500,
+                            color: 'var(--color-text)',
+                            mb: 1.5,
+                          }}
+                        >
+                          Books Due Today ({todayDueBorrows.length})
+                        </Typography>
+                        {todayDueBorrows.length === 0 ? (
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: 'var(--color-text-muted)',
+                              fontFamily: 'var(--font-body)',
+                            }}
+                          >
+                            No books are due today.
+                          </Typography>
+                        ) : (
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell
+                                  sx={{
+                                    fontFamily: 'var(--font-body)',
+                                    fontWeight: 600,
+                                    color: 'var(--color-text)',
+                                  }}
+                                >
+                                  Title
+                                </TableCell>
+                                {isLibrarian && (
+                                  <TableCell
+                                    sx={{
+                                      fontFamily: 'var(--font-body)',
+                                      fontWeight: 600,
+                                      color: 'var(--color-text)',
+                                    }}
+                                  >
+                                    Member
+                                  </TableCell>
+                                )}
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {todayDueBorrows.map((borrow) => (
+                                <TableRow key={borrow.id}>
+                                  <TableCell
+                                    sx={{
+                                      fontFamily: 'var(--font-body)',
+                                      color: 'var(--color-text)',
+                                    }}
+                                  >
+                                    {borrow.book?.title || 'Unknown Book'}
+                                  </TableCell>
+                                  {isLibrarian && (
+                                    <TableCell
+                                      sx={{
+                                        fontFamily: 'var(--font-body)',
+                                        color: 'var(--color-text-muted)',
+                                      }}
+                                    >
+                                      {borrow.user?.email || 'Unknown User'}
+                                    </TableCell>
+                                  )}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        )}
+                      </Paper>
+                    </Box>
+
+                    {isLibrarian && (
+                      <Box>
+                        <Paper
+                          elevation={0}
+                          sx={{
+                            p: 2,
+                            bgcolor: 'var(--color-surface)',
+                            border: '1px solid var(--color-border)',
+                            borderRadius: 2,
+                            height: '100%',
+                          }}
+                        >
+                          <Typography
+                            variant="subtitle1"
+                            sx={{
+                              fontFamily: 'var(--font-display)',
+                              fontWeight: 500,
+                              color: 'var(--color-text)',
+                              mb: 1.5,
+                            }}
+                          >
+                            Members with Due Books ({membersWithDueBooks.length})
+                          </Typography>
+                          {membersWithDueBooks.length === 0 ? (
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: 'var(--color-text-muted)',
+                                fontFamily: 'var(--font-body)',
+                              }}
+                            >
+                              No members have books due today or overdue.
+                            </Typography>
+                          ) : (
+                            <Table size="small">
+                              <TableHead>
+                                <TableRow>
+                                  <TableCell
+                                    sx={{
+                                      fontFamily: 'var(--font-body)',
+                                      fontWeight: 600,
+                                      color: 'var(--color-text)',
+                                    }}
+                                  >
+                                    Member
+                                  </TableCell>
+                                  <TableCell
+                                    sx={{
+                                      fontFamily: 'var(--font-body)',
+                                      fontWeight: 600,
+                                      color: 'var(--color-text)',
+                                    }}
+                                  >
+                                    Due Books
+                                  </TableCell>
+                                </TableRow>
+                              </TableHead>
+                              <TableBody>
+                                {membersWithDueBooks.map((member) => (
+                                  <TableRow key={member.email}>
+                                    <TableCell
+                                      sx={{
+                                        fontFamily: 'var(--font-body)',
+                                        color: 'var(--color-text)',
+                                      }}
+                                    >
+                                      {member.email}
+                                    </TableCell>
+                                    <TableCell
+                                      sx={{
+                                        fontFamily: 'var(--font-body)',
+                                        color: 'var(--color-text-muted)',
+                                      }}
+                                    >
+                                      {member.count}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          )}
+                        </Paper>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              )}
+
               {/* Librarian Table Section */}
               {isLibrarian && allBorrows.length > 0 && (
                 <Box>

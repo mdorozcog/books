@@ -10,6 +10,10 @@ import {
   Link,
   CircularProgress,
   Stack,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Select,
 } from '@mui/material'
 import '../../App.css'
 import { useRegisterStore } from './useRegisterStore'
@@ -21,11 +25,13 @@ function RegisterPage() {
     email,
     password,
     passwordConfirmation,
+    role,
     isLoading,
     error,
     setEmail,
     setPassword,
     setPasswordConfirmation,
+    setRole,
     setError,
     handleRegister,
   } = useRegisterStore()
@@ -217,6 +223,46 @@ function RegisterPage() {
                     },
                   }}
                 />
+
+                <FormControl fullWidth required>
+                  <InputLabel
+                    id="role-label"
+                    sx={{
+                      color: 'var(--color-text-muted)',
+                      '&.Mui-focused': {
+                        color: 'var(--color-accent)',
+                      },
+                    }}
+                  >
+                    Role
+                  </InputLabel>
+                  <Select
+                    labelId="role-label"
+                    id="role"
+                    value={role}
+                    label="Role"
+                    onChange={(e) => setRole(e.target.value)}
+                    sx={{
+                      backgroundColor: 'var(--color-bg)',
+                      color: 'var(--color-text)',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'var(--color-border)',
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'var(--color-accent)',
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'var(--color-accent)',
+                      },
+                      '& .MuiSvgIcon-root': {
+                        color: 'var(--color-text-muted)',
+                      },
+                    }}
+                  >
+                    <MenuItem value="member">Member</MenuItem>
+                    <MenuItem value="librarian">Librarian</MenuItem>
+                  </Select>
+                </FormControl>
 
                 <Button
                   type="submit"

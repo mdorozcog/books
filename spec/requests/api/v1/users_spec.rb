@@ -50,13 +50,13 @@ RSpec.describe "Api::V1::Users", type: :request do
         expect(user.has_role?("member")).to be true
       end
 
-      it "does not assign the librarian role to the new user" do
-        post "/api/v1/users", params: valid_user_params, as: :json
+      it "assign the librarian role to the new user" do
+        post "/api/v1/users", params: valid_user_params.deep_merge(user: { roles: [ :librarian ] }), as: :json
 
         user = User.find_by(email: "newuser@example.com")
         expect(user).to be_present
-        expect(user.roles).not_to include(librarian_role)
-        expect(user.has_role?("librarian")).to be false
+        expect(user.roles).to include(librarian_role)
+        expect(user.has_role?("librarian")).to be true
       end
 
       it "does not require authentication" do
@@ -162,49 +162,6 @@ RSpec.describe "Api::V1::Users", type: :request do
       end
     end
 
-    context "when attempting to assign librarian role" do
-      it "ignores any role parameters in the request" do
-        # Even if someone tries to pass role information, it should be ignored
-        post "/api/v1/users", params: {
-          user: {
-            email: "newuser@example.com",
-            password: "password123",
-            password_confirmation: "password123",
-            roles: [ "librarian" ]
-          }
-        }, as: :json
-
-        user = User.find_by(email: "newuser@example.com")
-        expect(user).to be_present
-        expect(user.roles).not_to include(librarian_role)
-        expect(user.has_role?("librarian")).to be false
-        expect(user.has_role?("member")).to be true
-      end
-
-      it "only assigns member role regardless of request parameters" do
-        post "/api/v1/users", params: valid_user_params, as: :json
-
-        user = User.find_by(email: "newuser@example.com")
-        expect(user.roles.count).to eq(1)
-        expect(user.roles.first.name).to eq("member")
-      end
-    end
-
-    context "when member role does not exist" do
-      before do
-        Role.where(name: "member").destroy_all
-      end
-
-      it "creates the member role if it doesn't exist" do
-        expect {
-          post "/api/v1/users", params: valid_user_params, as: :json
-        }.to change(Role, :count).by(1)
-
-        expect(Role.find_by(name: "member")).to be_present
-        user = User.find_by(email: "newuser@example.com")
-        expect(user.has_role?("member")).to be true
-      end
-    end
 
     context "edge cases" do
       it "handles empty email" do
@@ -250,6 +207,21 @@ RSpec.describe "Api::V1::Users", type: :request do
 
         expect(response).to have_http_status(:unprocessable_content)
         expect(json_response[:errors]).to be_present
+      end
+
+      it "defaults to member role when payload is invalid" do
+        post "/api/v1/users", params: {
+          user: {
+            email: "test@example.com",
+            password: "password123",
+            password_confirmation: "password123",
+            roles: [ "invalid" ]
+          }
+        }, as: :json
+
+        user = User.find_by(email: "test@example.com")
+
+        expect(user.roles.pluck(:name)).to include("member")
       end
     end
   end

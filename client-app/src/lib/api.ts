@@ -1,21 +1,15 @@
-const API_URL = import.meta.env.VITE_API_URL;
-const API_BASE_PATH = import.meta.env.VITE_API_BASE_PATH;
-
-export const API_ENDPOINT = `${API_URL}${API_BASE_PATH}`;
-
-interface LoginResponse {
-  message: string;
-  user: {
-    id: number;
-    email: string;
-    roles: string[];
-  };
-  token: string;
-}
-
-interface ApiError {
-  error: string;
-}
+import { API_ENDPOINT } from './apiConfig';
+import type {
+  LoginResponse,
+  ApiError,
+  RegisterParams,
+  RegisterResponse,
+  Book,
+  CreateBookParams,
+  CreateBorrowParams,
+  Borrow,
+  UpdateBorrowParams,
+} from './apiTypes';
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
   const response = await fetch(`${API_ENDPOINT}/login`, {
@@ -62,17 +56,6 @@ export function removeStoredToken(): void {
   localStorage.removeItem("auth_token");
 }
 
-export interface RegisterParams {
-  email: string;
-  password: string;
-  password_confirmation: string;
-}
-
-export interface RegisterResponse {
-  email: string;
-  roles: string[];
-}
-
 export async function register(params: RegisterParams): Promise<RegisterResponse> {
   const response = await fetch(`${API_ENDPOINT}/users`, {
     method: "POST",
@@ -90,18 +73,6 @@ export async function register(params: RegisterParams): Promise<RegisterResponse
   }
 
   return data as RegisterResponse;
-}
-
-export interface Book {
-  id: number;
-  title: string;
-  author: string;
-  genre: string;
-  isbn: string;
-  copies: number;
-  available_copies: number;
-  created_at: string;
-  updated_at: string;
 }
 
 export async function fetchBooks(): Promise<Book[]> {
@@ -172,14 +143,6 @@ export async function searchBooks(query: string): Promise<Book[]> {
   }
 
   return data as Book[];
-}
-
-export interface CreateBookParams {
-  title: string;
-  author: string;
-  genre: string;
-  isbn: string;
-  copies: number;
 }
 
 export async function createBook(book: CreateBookParams): Promise<Book> {
@@ -253,26 +216,6 @@ export async function deleteBook(id: number): Promise<void> {
   }
 }
 
-export interface CreateBorrowParams {
-  book_id: number;
-  due_at?: string;
-}
-
-export interface Borrow {
-  id: number;
-  user_id: number;
-  book_id: number;
-  status: string;
-  due_at: string | null;
-  created_at: string;
-  updated_at: string;
-  book?: Book;
-  user?: {
-    id: number;
-    email: string;
-  };
-}
-
 export async function createBorrow(params: CreateBorrowParams): Promise<Borrow> {
   const token = getStoredToken();
   if (!token) {
@@ -321,11 +264,6 @@ export async function fetchBorrows(): Promise<Borrow[]> {
   return data as Borrow[];
 }
 
-export interface UpdateBorrowParams {
-  status?: string;
-  due_at?: string;
-}
-
 export async function updateBorrow(id: number, params: UpdateBorrowParams): Promise<Borrow> {
   const token = getStoredToken();
   if (!token) {
@@ -350,4 +288,18 @@ export async function updateBorrow(id: number, params: UpdateBorrowParams): Prom
 
   return data as Borrow;
 }
+
+// Re-export types so existing imports from './api' keep working
+export type {
+  LoginResponse,
+  ApiError,
+  RegisterParams,
+  RegisterResponse,
+  Book,
+  CreateBookParams,
+  CreateBorrowParams,
+  Borrow,
+  UpdateBorrowParams,
+};
+
 
